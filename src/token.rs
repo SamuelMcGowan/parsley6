@@ -19,8 +19,8 @@ where
     S: Stream<'a>,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        match input.peek_token() {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match stream.peek_token() {
             Some(token) if token == self.0 => Ok(token),
             _ => Err(BuiltinError::ExpectedToken(self.0.clone())),
         }
@@ -40,10 +40,10 @@ where
     S: Stream<'a>,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        match input.peek_token() {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match stream.peek_token() {
             Some(token) if token == self.0 => {
-                input.advance();
+                stream.advance();
                 Ok(token)
             }
             _ => Err(BuiltinError::ExpectedToken(self.0.clone())),
@@ -65,8 +65,8 @@ where
     S: Stream<'a>,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        input.peek_token().ok_or_else(|| BuiltinError::ExpectedAny)
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        stream.peek_token().ok_or_else(|| BuiltinError::ExpectedAny)
     }
 }
 
@@ -83,8 +83,8 @@ where
     F: FnMut(&S::Token) -> bool,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        match input.peek_token() {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match stream.peek_token() {
             Some(token) if (self.0)(&token) => Ok(token),
             _ => Err(BuiltinError::ExpectedMatch),
         }
@@ -104,10 +104,10 @@ where
     F: FnMut(&S::Token) -> bool,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        match input.peek_token() {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match stream.peek_token() {
             Some(token) if (self.0)(&token) => {
-                input.advance();
+                stream.advance();
                 Ok(token)
             }
             _ => Err(BuiltinError::ExpectedMatch),
@@ -129,8 +129,8 @@ where
     S: Stream<'a>,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
-        input.next_token().ok_or_else(|| BuiltinError::ExpectedAny)
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        stream.next_token().ok_or_else(|| BuiltinError::ExpectedAny)
     }
 }
 
@@ -148,8 +148,8 @@ where
     S: Stream<'a>,
 {
     #[inline]
-    fn parse(&mut self, input: &mut S) -> Result<(), BuiltinError<'a, S>> {
-        if input.at_end() {
+    fn parse(&mut self, stream: &mut S) -> Result<(), BuiltinError<'a, S>> {
+        if stream.at_end() {
             Ok(())
         } else {
             Err(BuiltinError::ExpectedEnd)
