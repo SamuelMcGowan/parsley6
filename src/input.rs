@@ -20,9 +20,12 @@ pub trait Input<'a> {
     }
 }
 
-pub trait Slice {
+/// A slice, namely `[T]` or [`str`].
+pub trait Slice: crate::sealed::Sealed {
     fn slice_prefix(&self, len: usize) -> Option<&Self>;
 }
+
+impl crate::sealed::Sealed for str {}
 
 impl Slice for str {
     #[inline]
@@ -30,6 +33,8 @@ impl Slice for str {
         self.get(..len)
     }
 }
+
+impl<T> crate::sealed::Sealed for [T] {}
 
 impl<T> Slice for [T] {
     #[inline]
