@@ -4,6 +4,6 @@ pub mod stream;
 
 pub mod token;
 
-mod sealed {
-    pub trait Sealed {}
-}
+// mod sealed {
+//     pub trait Sealed {}
+// }

@@ -1,4 +1,10 @@
-use crate::{error::BuiltinError, parser::Parser, stream::Stream};
+// TODO: add more bounds to builder functions.
+
+pub mod text;
+
+use crate::error::BuiltinError;
+use crate::parser::Parser;
+use crate::stream::Stream;
 
 #[inline]
 pub fn peek<T>(token: T) -> Peek<T> {
@@ -8,7 +14,10 @@ pub fn peek<T>(token: T) -> Peek<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Peek<T>(T);
 
-impl<'a, S: Stream<'a>> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Peek<S::Token> {
+impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Peek<S::Token>
+where
+    S: Stream<'a>,
+{
     #[inline]
     fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
         match input.peek_token() {
@@ -26,7 +35,10 @@ pub fn eat<T>(token: T) -> Eat<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Eat<T>(T);
 
-impl<'a, S: Stream<'a>> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Eat<S::Token> {
+impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Eat<S::Token>
+where
+    S: Stream<'a>,
+{
     #[inline]
     fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
         match input.peek_token() {
@@ -48,10 +60,58 @@ pub fn peek_any() -> PeekAny {
 #[non_exhaustive]
 pub struct PeekAny {}
 
-impl<'a, S: Stream<'a>> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekAny {
+impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekAny
+where
+    S: Stream<'a>,
+{
     #[inline]
     fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
         input.peek_token().ok_or_else(|| BuiltinError::ExpectedAny)
+    }
+}
+
+#[inline]
+pub fn peek_match<F>(f: F) -> PeekMatch<F> {
+    PeekMatch(f)
+}
+
+pub struct PeekMatch<F>(F);
+
+impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekMatch<F>
+where
+    S: Stream<'a>,
+    F: FnMut(&S::Token) -> bool,
+{
+    #[inline]
+    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match input.peek_token() {
+            Some(token) if (self.0)(&token) => Ok(token),
+            _ => Err(BuiltinError::ExpectedMatch),
+        }
+    }
+}
+
+#[inline]
+pub fn eat_match<F>(f: F) -> EatMatch<F> {
+    EatMatch(f)
+}
+
+pub struct EatMatch<F>(F);
+
+impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatMatch<F>
+where
+    S: Stream<'a>,
+    F: FnMut(&S::Token) -> bool,
+{
+    #[inline]
+    fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+        match input.peek_token() {
+            Some(token) if (self.0)(&token) => {
+                input.advance();
+                Ok(token)
+            }
+            _ => Err(BuiltinError::ExpectedMatch),
+        }
     }
 }
 
@@ -64,7 +124,10 @@ pub fn eat_any() -> EatAny {
 #[non_exhaustive]
 pub struct EatAny {}
 
-impl<'a, S: Stream<'a>> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatAny {
+impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatAny
+where
+    S: Stream<'a>,
+{
     #[inline]
     fn parse(&mut self, input: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
         input.next_token().ok_or_else(|| BuiltinError::ExpectedAny)
@@ -80,7 +143,10 @@ pub fn end() -> End {
 #[non_exhaustive]
 pub struct End {}
 
-impl<'a, S: Stream<'a>> Parser<'a, S, (), BuiltinError<'a, S>> for End {
+impl<'a, S> Parser<'a, S, (), BuiltinError<'a, S>> for End
+where
+    S: Stream<'a>,
+{
     #[inline]
     fn parse(&mut self, input: &mut S) -> Result<(), BuiltinError<'a, S>> {
         if input.at_end() {

@@ -6,6 +6,7 @@ use crate::stream::Stream;
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; S::Token)]
 pub enum BuiltinError<'a, S: Stream<'a>> {
     ExpectedToken(S::Token),
+    ExpectedMatch,
     ExpectedAny,
     ExpectedEnd,
 }

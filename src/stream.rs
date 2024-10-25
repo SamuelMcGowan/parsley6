@@ -22,8 +22,8 @@ pub trait Stream<'a> {
     }
 }
 
-/// A slice, namely `[T]` or [`str`].
-pub trait Slice: crate::sealed::Sealed {
+/// A slice, for example `[T]` or [`str`].
+pub trait Slice {
     fn try_prefix(&self, len: usize) -> Option<&Self>;
 
     #[inline]
@@ -32,16 +32,12 @@ pub trait Slice: crate::sealed::Sealed {
     }
 }
 
-impl crate::sealed::Sealed for str {}
-
 impl Slice for str {
     #[inline]
     fn try_prefix(&self, len: usize) -> Option<&Self> {
         self.get(..len)
     }
 }
-
-impl<T> crate::sealed::Sealed for [T] {}
 
 impl<T> Slice for [T] {
     #[inline]
