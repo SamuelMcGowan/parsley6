@@ -11,3 +11,12 @@ pub trait Parser<'a, S: Stream<'a>, Output, Error> {
         self
     }
 }
+
+impl<'a, S: Stream<'a>, Output, Error, F: FnMut(&mut S) -> Result<Output, Error>>
+    Parser<'a, S, Output, Error> for F
+{
+    #[inline]
+    fn parse(&mut self, stream: &mut S) -> Result<Output, Error> {
+        self(stream)
+    }
+}

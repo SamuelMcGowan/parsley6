@@ -75,6 +75,7 @@ pub fn peek_match<F>(f: F) -> PeekMatch<F> {
     PeekMatch(f)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PeekMatch<F>(F);
 
 impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekMatch<F>
@@ -96,6 +97,7 @@ pub fn eat_match<F>(f: F) -> EatMatch<F> {
     EatMatch(f)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EatMatch<F>(F);
 
 impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatMatch<F>
