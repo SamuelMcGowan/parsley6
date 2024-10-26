@@ -83,11 +83,11 @@ pub fn peek_match<F>(f: F) -> PeekMatch<F> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PeekMatch<F>(F);
 
-impl<S, E, F> Parser<S, S::Token, E> for PeekMatch<F>
+impl<F, S, E> Parser<S, S::Token, E> for PeekMatch<F>
 where
+    F: FnMut(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
-    F: FnMut(&S::Token) -> bool,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
@@ -106,11 +106,11 @@ pub fn eat_match<F>(f: F) -> EatMatch<F> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EatMatch<F>(F);
 
-impl<S, E, F> Parser<S, S::Token, E> for EatMatch<F>
+impl<F, S, E> Parser<S, S::Token, E> for EatMatch<F>
 where
+    F: FnMut(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
-    F: FnMut(&S::Token) -> bool,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
