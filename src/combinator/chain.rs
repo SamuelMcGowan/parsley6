@@ -42,8 +42,16 @@ impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5 }
 impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5, G GO 6 }
 impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5, G GO 6, H HO 7 }
 
+#[macro_export]
+macro_rules! chain {
+    ($($e:expr),+ $(,)?) => {
+        $crate::combinator::chain::chain_inner(($($e),*))
+    };
+}
+
 #[inline]
-pub fn chain<S, O, E, Parsers>(parsers: Parsers) -> Chained<S, O, E, Parsers>
+#[doc(hidden)]
+pub fn chain_inner<S, O, E, Parsers>(parsers: Parsers) -> Chained<S, O, E, Parsers>
 where
     S: Stream,
     E: Error<S>,
@@ -55,6 +63,7 @@ where
     }
 }
 
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; Parsers)]
 pub struct Chained<S, O, E, Parsers> {
     parsers: Parsers,
     _phantom: PhantomData<*const (S, O, E)>,

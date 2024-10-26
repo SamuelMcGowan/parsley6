@@ -1,9 +1,12 @@
+use std::marker::PhantomData;
+
 use crate::{
-    error::Error,
-    prelude::{
+    combinator::{
         chain::{Prefixed, Suffixed},
-        prefixed, suffixed,
+        named::Named,
     },
+    error::Error,
+    prelude::{prefixed, suffixed},
     stream::Stream,
 };
 
@@ -33,6 +36,19 @@ where
         P: Parser<S, POutput, E>,
     {
         suffixed(self, parser)
+    }
+
+    /// Creates a parser with a custom name for error messages.
+    fn named<Name>(self, name: Name) -> Named<Self, Name, S, O, E>
+    where
+        Self: Sized,
+        Name: Clone + Into<E::Name>,
+    {
+        Named {
+            parser: self,
+            name,
+            _phantom: PhantomData,
+        }
     }
 
     /// Hide the type of the parser.
