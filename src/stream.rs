@@ -1,8 +1,12 @@
-use std::{marker::PhantomData, ops::Range, slice::Iter, str::Chars};
+use std::ops::{Deref, Range};
+use std::slice::Iter;
+use std::str::Chars;
 
-pub trait Stream<'a> {
+pub trait Stream {
     type Token: Clone + PartialEq;
-    type Slice: PartialEq + ?Sized + 'a;
+
+    type Slice: PartialEq + ?Sized;
+    type SliceRef: Deref<Target = Self::Slice> + Copy;
 
     type SourceLoc: Default + Clone;
 
@@ -11,10 +15,10 @@ pub trait Stream<'a> {
     #[must_use = "If you don't need the token, use `Input::advance`"]
     fn next_token(&mut self) -> Option<Self::Token>;
 
-    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice>;
+    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef>;
 
     #[must_use = "If you don't need the slice, use `Input::advance_len`"]
-    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice>;
+    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef>;
 
     fn source_loc(&self) -> Self::SourceLoc;
     fn source_span(&self) -> Range<Self::SourceLoc>;
@@ -49,9 +53,11 @@ impl<'a> CharStream<'a> {
     }
 }
 
-impl<'a> Stream<'a> for CharStream<'a> {
+impl<'a> Stream for CharStream<'a> {
     type Token = char;
+
     type Slice = str;
+    type SliceRef = &'a str;
 
     type SourceLoc = usize;
 
@@ -66,7 +72,7 @@ impl<'a> Stream<'a> for CharStream<'a> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
+    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
         self.chars
             .as_str()
             .split_at_checked(len)
@@ -74,7 +80,7 @@ impl<'a> Stream<'a> for CharStream<'a> {
     }
 
     #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
+    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
         let (slice, rest) = self.chars.as_str().split_at_checked(len)?;
         self.chars = rest.chars();
         Some(slice)
@@ -111,9 +117,11 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> SliceIter<'a, T> {
     }
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> Stream<'a> for SliceIter<'a, T> {
+impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceIter<'a, T> {
     type Token = &'a T;
+
     type Slice = [T];
+    type SliceRef = &'a [T];
 
     type SourceLoc = T::SourcePosition;
 
@@ -128,7 +136,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream<'a> for SliceIter<'a, T> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
+    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
         self.iter
             .as_slice()
             .split_at_checked(len)
@@ -136,7 +144,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream<'a> for SliceIter<'a, T> {
     }
 
     #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
+    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
         let (slice, rest) = self.iter.as_slice().split_at_checked(len)?;
         self.iter = rest.iter();
         Some(slice)
@@ -157,26 +165,23 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream<'a> for SliceIter<'a, T> {
     }
 }
 
-pub struct StreamWithState<'a, S: Stream<'a>, State> {
+pub struct StreamWithState<S: Stream, State> {
     pub stream: S,
     pub state: State,
-    _phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, S: Stream<'a>, State> StreamWithState<'a, S, State> {
+impl<S: Stream, State> StreamWithState<S, State> {
     #[inline]
     pub fn new(stream: S, state: State) -> Self {
-        Self {
-            stream,
-            state,
-            _phantom: PhantomData,
-        }
+        Self { stream, state }
     }
 }
 
-impl<'a, S: Stream<'a>, State> Stream<'a> for StreamWithState<'a, S, State> {
+impl<S: Stream, State> Stream for StreamWithState<S, State> {
     type Token = S::Token;
+
     type Slice = S::Slice;
+    type SliceRef = S::SliceRef;
 
     type SourceLoc = S::SourceLoc;
 
@@ -191,12 +196,12 @@ impl<'a, S: Stream<'a>, State> Stream<'a> for StreamWithState<'a, S, State> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
+    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
         self.stream.peek_slice(len)
     }
 
     #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
+    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
         self.stream.next_slice(len)
     }
 

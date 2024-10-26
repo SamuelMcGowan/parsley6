@@ -1,5 +1,3 @@
-use std::str::Chars;
-
 use parsley6::{
     error::BuiltinError,
     parser::Parser,
@@ -13,8 +11,8 @@ fn main() {
 }
 
 fn five_letters<'a>(
-    stream: &mut Chars<'a>,
-) -> Result<(char, char, char, char, char), BuiltinError<'a, Chars<'a>>> {
+    stream: &mut CharStream<'a>,
+) -> Result<(char, char, char, char, char), BuiltinError<CharStream<'a>>> {
     let a = eat_match(Ascii::is_ascii_alphabetic);
     (a, a, a, a, a).parse(stream)
 }

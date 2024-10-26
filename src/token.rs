@@ -14,12 +14,12 @@ pub fn peek<T>(token: T) -> Peek<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Peek<T>(T);
 
-impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Peek<S::Token>
+impl<S> Parser<S, S::Token, BuiltinError<S>> for Peek<S::Token>
 where
-    S: Stream<'a>,
+    S: Stream,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         match stream.peek_token() {
             Some(token) if token == self.0 => Ok(token),
             _ => Err(BuiltinError::ExpectedToken(self.0.clone())),
@@ -35,12 +35,12 @@ pub fn eat<T>(token: T) -> Eat<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Eat<T>(T);
 
-impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for Eat<S::Token>
+impl<S> Parser<S, S::Token, BuiltinError<S>> for Eat<S::Token>
 where
-    S: Stream<'a>,
+    S: Stream,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         match stream.peek_token() {
             Some(token) if token == self.0 => {
                 stream.advance();
@@ -60,12 +60,12 @@ pub fn peek_any() -> PeekAny {
 #[non_exhaustive]
 pub struct PeekAny {}
 
-impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekAny
+impl<S> Parser<S, S::Token, BuiltinError<S>> for PeekAny
 where
-    S: Stream<'a>,
+    S: Stream,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         stream.peek_token().ok_or_else(|| BuiltinError::ExpectedAny)
     }
 }
@@ -78,13 +78,13 @@ pub fn peek_match<F>(f: F) -> PeekMatch<F> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PeekMatch<F>(F);
 
-impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for PeekMatch<F>
+impl<S, F> Parser<S, S::Token, BuiltinError<S>> for PeekMatch<F>
 where
-    S: Stream<'a>,
+    S: Stream,
     F: FnMut(&S::Token) -> bool,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         match stream.peek_token() {
             Some(token) if (self.0)(&token) => Ok(token),
             _ => Err(BuiltinError::ExpectedMatch),
@@ -100,13 +100,13 @@ pub fn eat_match<F>(f: F) -> EatMatch<F> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EatMatch<F>(F);
 
-impl<'a, S, F> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatMatch<F>
+impl<S, F> Parser<S, S::Token, BuiltinError<S>> for EatMatch<F>
 where
-    S: Stream<'a>,
+    S: Stream,
     F: FnMut(&S::Token) -> bool,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         match stream.peek_token() {
             Some(token) if (self.0)(&token) => {
                 stream.advance();
@@ -126,12 +126,12 @@ pub fn eat_any() -> EatAny {
 #[non_exhaustive]
 pub struct EatAny {}
 
-impl<'a, S> Parser<'a, S, S::Token, BuiltinError<'a, S>> for EatAny
+impl<S> Parser<S, S::Token, BuiltinError<S>> for EatAny
 where
-    S: Stream<'a>,
+    S: Stream,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, BuiltinError<S>> {
         stream.next_token().ok_or_else(|| BuiltinError::ExpectedAny)
     }
 }
@@ -145,12 +145,12 @@ pub fn end() -> End {
 #[non_exhaustive]
 pub struct End {}
 
-impl<'a, S> Parser<'a, S, (), BuiltinError<'a, S>> for End
+impl<S> Parser<S, (), BuiltinError<S>> for End
 where
-    S: Stream<'a>,
+    S: Stream,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<(), BuiltinError<'a, S>> {
+    fn parse(&mut self, stream: &mut S) -> Result<(), BuiltinError<S>> {
         if stream.at_end() {
             Ok(())
         } else {

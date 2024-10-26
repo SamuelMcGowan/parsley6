@@ -7,11 +7,11 @@ use crate::stream::Stream;
 
 macro_rules! impl_chained_parsers {
     ($($parser:ident $output:ident $n:tt),+) => {
-        impl<'a, S, Error, $($parser, $output,)*>
-        Parser<'a, S, ($($output,)*), Error> for ($($parser,)*)
+        impl<S, Error, $($parser, $output,)*>
+        Parser<S, ($($output,)*), Error> for ($($parser,)*)
         where
-            S: Stream<'a>,
-            $($parser: Parser<'a, S, $output, Error>,)*
+            S: Stream,
+            $($parser: Parser<S, $output, Error>,)*
         {
             #[allow(non_snake_case)]
             fn parse(&mut self, stream: &mut S) -> Result<($($output,)*), Error> {
@@ -32,14 +32,14 @@ impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5, G GO 6 }
 impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5, G GO 6, H HO 7 }
 
 #[inline]
-pub fn prefixed<'a, A, B, S, AOutput, BOutput, Error>(
+pub fn prefixed<A, B, S, AOutput, BOutput, Error>(
     prefix: A,
     parser: B,
-) -> Prefixed<'a, A, B, AOutput, BOutput, S, Error>
+) -> Prefixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     Prefixed {
         prefix,
@@ -49,23 +49,23 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B)]
-pub struct Prefixed<'a, A, B, AOutput, BOutput, S, Error>
+pub struct Prefixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     prefix: A,
     parser: B,
-    _phantom: PhantomData<&'a (S, AOutput, BOutput, Error)>,
+    _phantom: PhantomData<*const (S, AOutput, BOutput, Error)>,
 }
 
-impl<'a, A, B, AOutput, BOutput, S, Error> Parser<'a, S, BOutput, Error>
-    for Prefixed<'a, A, B, AOutput, BOutput, S, Error>
+impl<A, B, AOutput, BOutput, S, Error> Parser<S, BOutput, Error>
+    for Prefixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<BOutput, Error> {
         let _ = self.prefix.parse(stream)?;
@@ -74,14 +74,14 @@ where
 }
 
 #[inline]
-pub fn suffixed<'a, A, B, S, AOutput, BOutput, Error>(
+pub fn suffixed<A, B, S, AOutput, BOutput, Error>(
     parser: A,
     suffix: B,
-) -> Suffixed<'a, A, B, AOutput, BOutput, S, Error>
+) -> Suffixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     Suffixed {
         parser,
@@ -91,23 +91,23 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B)]
-pub struct Suffixed<'a, A, B, AOutput, BOutput, S, Error>
+pub struct Suffixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     parser: A,
     suffix: B,
-    _phantom: PhantomData<&'a (S, AOutput, BOutput, Error)>,
+    _phantom: PhantomData<*const (S, AOutput, BOutput, Error)>,
 }
 
-impl<'a, A, B, AOutput, BOutput, S, Error> Parser<'a, S, AOutput, Error>
-    for Suffixed<'a, A, B, AOutput, BOutput, S, Error>
+impl<A, B, AOutput, BOutput, S, Error> Parser<S, AOutput, Error>
+    for Suffixed<A, B, AOutput, BOutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<AOutput, Error> {
         let output = self.parser.parse(stream)?;
@@ -117,16 +117,16 @@ where
 }
 
 #[inline]
-pub fn between<'a, A, B, C, S, AOutput, BOutput, COutput, Error>(
+pub fn between<A, B, C, S, AOutput, BOutput, COutput, Error>(
     prefix: A,
     parser: B,
     suffix: C,
-) -> Between<'a, A, B, C, AOutput, BOutput, COutput, S, Error>
+) -> Between<A, B, C, AOutput, BOutput, COutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
-    C: Parser<'a, S, COutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
+    C: Parser<S, COutput, Error>,
 {
     Between {
         prefix,
@@ -137,26 +137,26 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B, C)]
-pub struct Between<'a, A, B, C, AOutput, BOutput, COutput, S, Error>
+pub struct Between<A, B, C, AOutput, BOutput, COutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
-    C: Parser<'a, S, COutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
+    C: Parser<S, COutput, Error>,
 {
     prefix: A,
     parser: B,
     suffix: C,
-    _phantom: PhantomData<&'a (S, AOutput, BOutput, COutput, Error)>,
+    _phantom: PhantomData<*const (S, AOutput, BOutput, COutput, Error)>,
 }
 
-impl<'a, A, B, C, AOutput, BOutput, COutput, S, Error> Parser<'a, S, BOutput, Error>
-    for Between<'a, A, B, C, AOutput, BOutput, COutput, S, Error>
+impl<A, B, C, AOutput, BOutput, COutput, S, Error> Parser<S, BOutput, Error>
+    for Between<A, B, C, AOutput, BOutput, COutput, S, Error>
 where
-    S: Stream<'a>,
-    A: Parser<'a, S, AOutput, Error>,
-    B: Parser<'a, S, BOutput, Error>,
-    C: Parser<'a, S, COutput, Error>,
+    S: Stream,
+    A: Parser<S, AOutput, Error>,
+    B: Parser<S, BOutput, Error>,
+    C: Parser<S, COutput, Error>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<BOutput, Error> {
         let _ = self.prefix.parse(stream)?;
