@@ -1,8 +1,10 @@
-use std::{marker::PhantomData, slice::Iter, str::Chars};
+use std::{marker::PhantomData, ops::Range, slice::Iter, str::Chars};
 
 pub trait Stream<'a> {
     type Token: Clone + PartialEq;
     type Slice: PartialEq + ?Sized + 'a;
+
+    type SourceLoc: Default + Clone;
 
     fn peek_token(&self) -> Option<Self::Token>;
 
@@ -13,6 +15,9 @@ pub trait Stream<'a> {
 
     #[must_use = "If you don't need the slice, use `Input::advance_len`"]
     fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice>;
+
+    fn source_loc(&self) -> Self::SourceLoc;
+    fn source_span(&self) -> Range<Self::SourceLoc>;
 
     #[inline]
     fn advance(&mut self) {
@@ -29,59 +34,126 @@ pub trait Stream<'a> {
     }
 }
 
-impl<'a> Stream<'a> for Chars<'a> {
-    type Token = char;
-    type Slice = str;
+pub struct CharStream<'a> {
+    chars: Chars<'a>,
+    len: usize,
+}
 
+impl<'a> CharStream<'a> {
     #[inline]
-    fn peek_token(&self) -> Option<Self::Token> {
-        self.clone().next()
-    }
-
-    #[inline]
-    fn next_token(&mut self) -> Option<Self::Token> {
-        self.next()
-    }
-
-    #[inline]
-    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
-        self.as_str().split_at_checked(len).map(|(slice, _)| slice)
-    }
-
-    #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
-        let (slice, rest) = self.as_str().split_at_checked(len)?;
-        *self = rest.chars();
-        Some(slice)
+    pub fn new(s: &'a str) -> Self {
+        Self {
+            chars: s.chars(),
+            len: s.len(),
+        }
     }
 }
 
-impl<'a, T: Clone + PartialEq> Stream<'a> for Iter<'a, T> {
-    type Token = &'a T;
-    type Slice = [T];
+impl<'a> Stream<'a> for CharStream<'a> {
+    type Token = char;
+    type Slice = str;
+
+    type SourceLoc = usize;
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
-        self.clone().next()
+        self.chars.clone().next()
     }
 
     #[inline]
     fn next_token(&mut self) -> Option<Self::Token> {
-        self.next()
+        self.chars.next()
     }
 
     #[inline]
     fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
-        self.as_slice()
+        self.chars
+            .as_str()
             .split_at_checked(len)
             .map(|(slice, _)| slice)
     }
 
     #[inline]
     fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
-        let (slice, rest) = self.as_slice().split_at_checked(len)?;
-        *self = rest.iter();
+        let (slice, rest) = self.chars.as_str().split_at_checked(len)?;
+        self.chars = rest.chars();
         Some(slice)
+    }
+
+    #[inline]
+    fn source_loc(&self) -> Self::SourceLoc {
+        self.len - self.chars.as_str().len()
+    }
+
+    #[inline]
+    fn source_span(&self) -> Range<Self::SourceLoc> {
+        let start = self.source_loc();
+        let end = start + self.peek_token().map(|c| c.len_utf8()).unwrap_or(0);
+        start..end
+    }
+}
+
+pub struct SliceIter<'a, T: SourceSpanned> {
+    iter: Iter<'a, T>,
+    end: T::SourcePosition,
+}
+
+impl<'a, T: SourceSpanned + Clone + PartialEq> SliceIter<'a, T> {
+    #[inline]
+    pub fn new(slice: &'a [T]) -> Self {
+        Self {
+            iter: slice.iter(),
+            end: slice
+                .last()
+                .map(|token| token.source_span().end)
+                .unwrap_or_default(),
+        }
+    }
+}
+
+impl<'a, T: SourceSpanned + Clone + PartialEq> Stream<'a> for SliceIter<'a, T> {
+    type Token = &'a T;
+    type Slice = [T];
+
+    type SourceLoc = T::SourcePosition;
+
+    #[inline]
+    fn peek_token(&self) -> Option<Self::Token> {
+        self.iter.clone().next()
+    }
+
+    #[inline]
+    fn next_token(&mut self) -> Option<Self::Token> {
+        self.iter.next()
+    }
+
+    #[inline]
+    fn peek_slice(&self, len: usize) -> Option<&'a Self::Slice> {
+        self.iter
+            .as_slice()
+            .split_at_checked(len)
+            .map(|(slice, _)| slice)
+    }
+
+    #[inline]
+    fn next_slice(&mut self, len: usize) -> Option<&'a Self::Slice> {
+        let (slice, rest) = self.iter.as_slice().split_at_checked(len)?;
+        self.iter = rest.iter();
+        Some(slice)
+    }
+
+    #[inline]
+    fn source_loc(&self) -> Self::SourceLoc {
+        self.peek_token()
+            .map(|token| token.source_span().start)
+            .unwrap_or_else(|| self.end.clone())
+    }
+
+    #[inline]
+    fn source_span(&self) -> Range<Self::SourceLoc> {
+        self.peek_token()
+            .map(|token| token.source_span())
+            .unwrap_or_else(|| self.end.clone()..self.end.clone())
     }
 }
 
@@ -106,6 +178,8 @@ impl<'a, S: Stream<'a>, State> Stream<'a> for StreamWithState<'a, S, State> {
     type Token = S::Token;
     type Slice = S::Slice;
 
+    type SourceLoc = S::SourceLoc;
+
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
         self.stream.peek_token()
@@ -127,6 +201,16 @@ impl<'a, S: Stream<'a>, State> Stream<'a> for StreamWithState<'a, S, State> {
     }
 
     #[inline]
+    fn source_loc(&self) -> Self::SourceLoc {
+        self.stream.source_loc()
+    }
+
+    #[inline]
+    fn source_span(&self) -> Range<Self::SourceLoc> {
+        self.stream.source_span()
+    }
+
+    #[inline]
     fn advance(&mut self) {
         self.stream.advance();
     }
@@ -140,4 +224,10 @@ impl<'a, S: Stream<'a>, State> Stream<'a> for StreamWithState<'a, S, State> {
     fn at_end(&self) -> bool {
         self.stream.at_end()
     }
+}
+
+pub trait SourceSpanned {
+    type SourcePosition: Default + Clone;
+
+    fn source_span(&self) -> Range<Self::SourcePosition>;
 }

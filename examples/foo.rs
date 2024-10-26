@@ -3,11 +3,12 @@ use std::str::Chars;
 use parsley6::{
     error::BuiltinError,
     parser::Parser,
+    stream::CharStream,
     token::{eat_match, text::Ascii},
 };
 
 fn main() {
-    let mut stream = "hello world".chars();
+    let mut stream = CharStream::new("hello world");
     let _ = dbg!(five_letters.parse(&mut stream));
 }
 
