@@ -1,3 +1,3 @@
 mod chain;
 
-pub use chain::{between, prefixed, suffixed};
+pub use chain::{between, chain, prefixed, suffixed};

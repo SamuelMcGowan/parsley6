@@ -1,10 +1,14 @@
-use crate::stream::Stream;
+use crate::{error::Error, stream::Stream};
 
-pub trait Parser<S: Stream, Output, Error> {
-    fn parse(&mut self, stream: &mut S) -> Result<Output, Error>;
+pub trait Parser<S, O, E>
+where
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E>;
 
     #[inline]
-    fn opaque(self) -> impl Parser<S, Output, Error>
+    fn opaque(self) -> impl Parser<S, O, E>
     where
         Self: Sized,
     {
@@ -12,13 +16,14 @@ pub trait Parser<S: Stream, Output, Error> {
     }
 }
 
-impl<S, Output, Error, F> Parser<S, Output, Error> for F
+impl<S, O, E, F> Parser<S, O, E> for F
 where
     S: Stream,
-    F: FnMut(&mut S) -> Result<Output, Error>,
+    E: Error<S>,
+    F: FnMut(&mut S) -> Result<O, E>,
 {
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<Output, Error> {
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self(stream)
     }
 }
