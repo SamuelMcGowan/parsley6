@@ -28,14 +28,14 @@ where
     }
 }
 
-pub struct WithContext<P, MakeContext, Context, S, O, E> {
+pub struct WithErrContext<P, MakeContext, Context, S, O, E> {
     pub(crate) parser: P,
     pub(crate) make_context: MakeContext,
     pub(crate) _phantom: PhantomData<*const (Context, S, O, E)>,
 }
 
 impl<P, MakeContext, Context, S, O, E> Parser<S, O, E>
-    for WithContext<P, MakeContext, Context, S, O, E>
+    for WithErrContext<P, MakeContext, Context, S, O, E>
 where
     P: Parser<S, O, E>,
     MakeContext: FnMut() -> Context,

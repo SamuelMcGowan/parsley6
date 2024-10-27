@@ -17,15 +17,14 @@ fn main() {
     let _ = dbg!(bar_bat.parse(&mut stream));
 }
 
-fn bar_bat<'a>(
-    stream: &mut CharStream<'a>,
-) -> Result<(char, char, char), DefaultError<CharStream<'a>>> {
+fn bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, DefaultError<CharStream<'a>>> {
     chain!(
         eat('b'),
         eat('a'),
         alt!(eat('r'), eat('t')).with_err_cause(|| "expected `r` or `t`")
     )
+    .map_with_slice(|_, slice: &str| slice.to_ascii_uppercase())
     .then_drop(end())
-    .with_context(|| "while parsing `bar` or `bat`")
+    .with_err_context(|| "while parsing `bar` or `bat`")
     .parse(stream)
 }

@@ -5,9 +5,9 @@ pub mod stream;
 pub mod combinator;
 pub mod token;
 
-// mod sealed {
-//     pub trait Sealed {}
-// }
+mod sealed {
+    pub trait Sealed {}
+}
 
 pub mod prelude {
     pub use crate::parser::Parser;

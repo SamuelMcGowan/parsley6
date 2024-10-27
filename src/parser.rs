@@ -1,13 +1,14 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Range};
 
 use crate::{
     combinator::{
         chain::{Prefixed, Suffixed},
-        errors::{WithContext, WithErrCause},
+        errors::{WithErrCause, WithErrContext},
+        map::{Map, MapTo, MapToSlice, MapWithSlice, MapWithSpan, MapWithState},
     },
     error::Error,
     prelude::{prefixed, suffixed},
-    stream::Stream,
+    stream::{BorrowState, Stream},
 };
 
 pub trait Parser<S, O, E>
@@ -17,6 +18,94 @@ where
 {
     /// Run the parser on a stream.
     fn parse(&mut self, stream: &mut S) -> Result<O, E>;
+
+    /// Map the output of this parser to another value.
+    #[inline]
+    fn map<F, OB>(self, f: F) -> Map<Self, O, OB, F, S, E>
+    where
+        Self: Sized,
+        F: FnMut(O) -> OB,
+    {
+        Map {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to another value, with access to the stream's state.
+    ///
+    /// This is for use with the [`StreamWithState`](crate::stream::StreamWithState) stream
+    /// type, which as such is the only stream type that implements [`BorrowState`].
+    #[inline]
+    fn map_with_state<F, OB>(self, f: F) -> MapWithState<Self, O, OB, F, S, E>
+    where
+        Self: Sized,
+        S: BorrowState,
+        F: FnMut(O, &mut S::State) -> OB,
+    {
+        MapWithState {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to another value, with access to the parsed
+    /// value's source span.
+    #[inline]
+    fn map_with_span<F, OB>(self, f: F) -> MapWithSpan<Self, O, OB, F, S, E>
+    where
+        Self: Sized,
+        F: FnMut(O, Range<S::SourceLoc>) -> OB,
+    {
+        MapWithSpan {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to another value, with access to the parsed
+    /// value's source slice.
+    #[inline]
+    fn map_with_slice<F, OB>(self, f: F) -> MapWithSlice<Self, O, OB, F, S, E>
+    where
+        Self: Sized,
+        F: FnMut(O, S::SliceRef) -> OB,
+    {
+        MapWithSlice {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to a value without requiring a callback.
+    #[inline]
+    fn map_to<OB>(self, value: OB) -> MapTo<Self, O, OB, S, E>
+    where
+        Self: Sized,
+        OB: Clone,
+    {
+        MapTo {
+            parser: self,
+            value,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to the parsed value's source slice.
+    #[inline]
+    fn map_to_slice(self) -> MapToSlice<Self, S, O, E>
+    where
+        Self: Sized,
+    {
+        MapToSlice {
+            parser: self,
+            _phantom: PhantomData,
+        }
+    }
 
     /// Creates a parser that runs this parser followed by another, discarding the first parser's output.
     #[inline]
@@ -54,13 +143,16 @@ where
     }
 
     /// Creates a parser with additional context for error messages.
-    fn with_context<F, Context>(self, make_context: F) -> WithContext<Self, F, Context, S, O, E>
+    fn with_err_context<F, Context>(
+        self,
+        make_context: F,
+    ) -> WithErrContext<Self, F, Context, S, O, E>
     where
         Self: Sized,
         F: FnMut() -> Context,
         E::Context: From<Context>,
     {
-        WithContext {
+        WithErrContext {
             parser: self,
             make_context,
             _phantom: PhantomData,
