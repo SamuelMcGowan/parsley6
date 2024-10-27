@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use derive_where::derive_where;
 
-use crate::error::{Error, ErrorCause};
+use crate::error::{BuiltinCause, Error};
 use crate::parser::Parser;
 use crate::stream::Stream;
 
@@ -33,7 +33,7 @@ macro_rules! impl_alt_parsers {
                     }
                 )*
 
-                Err(Err::new(Err::Cause::unknown(), stream.peek_token_span()))
+                Err(Err::new(BuiltinCause::Unknown.into(), stream.peek_token_span()))
             }
         }
     };

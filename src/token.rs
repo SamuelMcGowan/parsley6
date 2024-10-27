@@ -2,7 +2,7 @@
 
 pub mod text;
 
-use crate::error::{Error, ErrorCause};
+use crate::error::{BuiltinCause, Error};
 use crate::parser::Parser;
 use crate::stream::Stream;
 
@@ -24,7 +24,7 @@ where
         match stream.peek_token() {
             Some(token) if token == self.0 => Ok(token),
             _ => Err(E::new(
-                E::Cause::expected_token(self.0.clone()),
+                BuiltinCause::ExpectedToken(self.0.clone()).into(),
                 stream.peek_token_span(),
             )),
         }
@@ -52,7 +52,7 @@ where
                 Ok(token)
             }
             _ => Err(E::new(
-                E::Cause::expected_token(self.0.clone()),
+                BuiltinCause::ExpectedToken(self.0.clone()).into(),
                 stream.peek_token_span(),
             )),
         }
@@ -77,7 +77,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         stream
             .peek_token()
-            .ok_or_else(|| E::new(E::Cause::expected_end(), stream.peek_token_span()))
+            .ok_or_else(|| E::new(BuiltinCause::ExpectedEnd.into(), stream.peek_token_span()))
     }
 }
 
@@ -99,7 +99,10 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if (self.0)(&token) => Ok(token),
-            _ => Err(E::new(E::Cause::expected_match(), stream.peek_token_span())),
+            _ => Err(E::new(
+                BuiltinCause::ExpectedMatch.into(),
+                stream.peek_token_span(),
+            )),
         }
     }
 }
@@ -125,7 +128,10 @@ where
                 stream.next_token();
                 Ok(token)
             }
-            _ => Err(E::new(E::Cause::expected_match(), stream.peek_token_span())),
+            _ => Err(E::new(
+                BuiltinCause::ExpectedMatch.into(),
+                stream.peek_token_span(),
+            )),
         }
     }
 }
@@ -148,7 +154,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         stream
             .next_token()
-            .ok_or_else(|| E::new(E::Cause::expected_any(), stream.peek_token_span()))
+            .ok_or_else(|| E::new(BuiltinCause::ExpectedAny.into(), stream.peek_token_span()))
     }
 }
 
@@ -171,7 +177,10 @@ where
         if stream.at_end() {
             Ok(())
         } else {
-            Err(E::new(E::Cause::expected_end(), stream.peek_token_span()))
+            Err(E::new(
+                BuiltinCause::ExpectedEnd.into(),
+                stream.peek_token_span(),
+            ))
         }
     }
 }

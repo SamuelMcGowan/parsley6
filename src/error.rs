@@ -5,7 +5,7 @@ use derive_where::derive_where;
 use crate::stream::Stream;
 
 pub trait Error<S: Stream> {
-    type Cause: ErrorCause<S>;
+    type Cause: From<BuiltinCause<S>>;
     type Context;
 
     fn new(cause: Self::Cause, span: Range<S::SourceLoc>) -> Self;
@@ -16,13 +16,13 @@ pub trait Error<S: Stream> {
     fn span(&self) -> Range<S::SourceLoc>;
 }
 
-pub trait ErrorCause<S: Stream> {
-    fn expected_token(token: S::Token) -> Self;
-    fn expected_match() -> Self;
-    fn expected_any() -> Self;
-    fn expected_end() -> Self;
-
-    fn unknown() -> Self;
+#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token)]
+pub enum BuiltinCause<S: Stream> {
+    ExpectedToken(S::Token),
+    ExpectedMatch,
+    ExpectedAny,
+    ExpectedEnd,
+    Unknown,
 }
 
 #[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::SourceLoc)]
@@ -61,17 +61,17 @@ impl<S: Stream> Error<S> for DefaultError<S> {
         self.span.clone()
     }
 }
-
 #[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token)]
 pub enum DefaultErrorCause<S: Stream> {
-    Token(S::Token),
-    Match,
-    Any,
-    End,
-
-    Unknown,
-
+    Builtin(BuiltinCause<S>),
     Custom(String),
+}
+
+impl<S: Stream> From<BuiltinCause<S>> for DefaultErrorCause<S> {
+    #[inline]
+    fn from(cause: BuiltinCause<S>) -> Self {
+        DefaultErrorCause::Builtin(cause)
+    }
 }
 
 impl<S: Stream> From<String> for DefaultErrorCause<S> {
@@ -92,32 +92,5 @@ impl<S: Stream> DefaultErrorCause<S> {
     #[inline]
     pub fn custom(message: impl Into<String>) -> Self {
         Self::Custom(message.into())
-    }
-}
-
-impl<S: Stream> ErrorCause<S> for DefaultErrorCause<S> {
-    #[inline]
-    fn expected_token(token: S::Token) -> Self {
-        DefaultErrorCause::Token(token)
-    }
-
-    #[inline]
-    fn expected_match() -> Self {
-        DefaultErrorCause::Match
-    }
-
-    #[inline]
-    fn expected_any() -> Self {
-        DefaultErrorCause::Any
-    }
-
-    #[inline]
-    fn expected_end() -> Self {
-        DefaultErrorCause::End
-    }
-
-    #[inline]
-    fn unknown() -> Self {
-        DefaultErrorCause::Unknown
     }
 }
