@@ -140,3 +140,120 @@ where
         Ok(stream.slice(start, end))
     }
 }
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct MapErr<P, F, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, S, O, E> Parser<S, O, E> for MapErr<P, F, S, O, E>
+where
+    P: Parser<S, O, E>,
+    F: FnMut(E) -> E,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        self.parser.parse(stream).map_err(&mut self.f)
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct MapErrWithState<P, F, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, S, O, E> Parser<S, O, E> for MapErrWithState<P, F, S, O, E>
+where
+    P: Parser<S, O, E>,
+    S: BorrowState,
+    F: FnMut(E, &mut S::State) -> E,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        self.parser
+            .parse(stream)
+            .map_err(|err| (self.f)(err, stream.borrow_state_mut()))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct MapErrWithSpan<P, F, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, S, O, E> Parser<S, O, E> for MapErrWithSpan<P, F, S, O, E>
+where
+    P: Parser<S, O, E>,
+    F: FnMut(E, Range<S::SourceLoc>) -> E,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        let start_span = stream.peek_token_span();
+
+        let err = match self.parser.parse(stream) {
+            Ok(output) => return Ok(output),
+            Err(err) => err,
+        };
+
+        let end_span = stream.prev_token_span();
+        let span = merge_spans_right(start_span, end_span);
+
+        Err((self.f)(err, span))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct MapErrWithSlice<P, F, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, S, O, E> Parser<S, O, E> for MapErrWithSlice<P, F, S, O, E>
+where
+    P: Parser<S, O, E>,
+    F: FnMut(E, S::SliceRef) -> E,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        let start = stream.stream_position();
+
+        let err = match self.parser.parse(stream) {
+            Ok(output) => return Ok(output),
+            Err(err) => err,
+        };
+
+        let end = stream.stream_position();
+        let slice = stream.slice(start, end);
+
+        Err((self.f)(err, slice))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, E)]
+pub struct MapErrTo<P, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) error: E,
+    pub(crate) _phantom: PhantomData<*const (S, O)>,
+}
+
+impl<P, S, O, E> Parser<S, O, E> for MapErrTo<P, S, O, E>
+where
+    P: Parser<S, O, E>,
+    S: Stream,
+    E: Error<S> + Clone,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        self.parser.parse(stream).map_err(|_| self.error.clone())
+    }
+}

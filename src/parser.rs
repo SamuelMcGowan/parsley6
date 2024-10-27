@@ -4,7 +4,10 @@ use crate::{
     combinator::{
         chain::{Prefixed, Suffixed},
         errors::{WithErrCause, WithErrContext},
-        map::{Map, MapTo, MapToSlice, MapWithSlice, MapWithSpan, MapWithState},
+        map::{
+            Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState, MapTo,
+            MapToSlice, MapWithSlice, MapWithSpan, MapWithState,
+        },
     },
     error::Error,
     prelude::{prefixed, suffixed},
@@ -103,6 +106,79 @@ where
     {
         MapToSlice {
             parser: self,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to another error.
+    #[inline]
+    fn map_err<F>(self, f: F) -> MapErr<Self, F, S, O, E>
+    where
+        Self: Sized,
+        F: FnMut(E) -> E,
+    {
+        MapErr {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to another error, with access to the stream's state.
+    #[inline]
+    fn map_err_with_state<F>(self, f: F) -> MapErrWithState<Self, F, S, O, E>
+    where
+        Self: Sized,
+        S: BorrowState,
+        F: FnMut(E, &mut S::State) -> E,
+    {
+        MapErrWithState {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to another error, with access to the parsed
+    /// value's source span.
+    #[inline]
+    fn map_err_with_span<F>(self, f: F) -> MapErrWithSpan<Self, F, S, O, E>
+    where
+        Self: Sized,
+        F: FnMut(E, Range<S::SourceLoc>) -> E,
+    {
+        MapErrWithSpan {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to another error, with access to the parsed
+    /// value's source slice.
+    #[inline]
+    fn map_err_with_slice<F>(self, f: F) -> MapErrWithSlice<Self, F, S, O, E>
+    where
+        Self: Sized,
+        F: FnMut(E, S::SliceRef) -> E,
+    {
+        MapErrWithSlice {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to another error without requiring a callback.
+    #[inline]
+    fn map_err_to(self, error: E) -> MapErrTo<Self, S, O, E>
+    where
+        Self: Sized,
+        E: Clone,
+    {
+        MapErrTo {
+            parser: self,
+            error,
             _phantom: PhantomData,
         }
     }
