@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::{
     combinator::{
         chain::{Prefixed, Suffixed},
-        named::Named,
+        errors::{WithContext, WithErrCause},
     },
     error::Error,
     prelude::{prefixed, suffixed},
@@ -38,15 +38,31 @@ where
         suffixed(self, parser)
     }
 
-    /// Creates a parser with a custom name for error messages.
-    fn named<Name>(self, name: Name) -> Named<Self, Name, S, O, E>
+    /// Creates a parser with a custom cause for error messages.
+    #[inline]
+    fn with_err_cause<F, Cause>(self, make_cause: F) -> WithErrCause<Self, F, Cause, S, O, E>
     where
         Self: Sized,
-        Name: Clone + Into<E::Name>,
+        F: FnMut() -> Cause,
+        E::Cause: From<Cause>,
     {
-        Named {
+        WithErrCause {
             parser: self,
-            name,
+            make_cause,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Creates a parser with additional context for error messages.
+    fn with_context<F, Context>(self, make_context: F) -> WithContext<Self, F, Context, S, O, E>
+    where
+        Self: Sized,
+        F: FnMut() -> Context,
+        E::Context: From<Context>,
+    {
+        WithContext {
+            parser: self,
+            make_context,
             _phantom: PhantomData,
         }
     }

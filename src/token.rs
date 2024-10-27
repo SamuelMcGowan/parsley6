@@ -2,7 +2,7 @@
 
 pub mod text;
 
-use crate::error::Error;
+use crate::error::{Error, ErrorCause};
 use crate::parser::Parser;
 use crate::stream::Stream;
 
@@ -23,7 +23,10 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if token == self.0 => Ok(token),
-            _ => Err(E::expected_token(self.0.clone(), stream.source_span())),
+            _ => Err(E::new(
+                E::Cause::expected_token(self.0.clone()),
+                stream.peek_token_span(),
+            )),
         }
     }
 }
@@ -45,10 +48,13 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if token == self.0 => {
-                stream.advance();
+                stream.next_token();
                 Ok(token)
             }
-            _ => Err(E::expected_token(self.0.clone(), stream.source_span())),
+            _ => Err(E::new(
+                E::Cause::expected_token(self.0.clone()),
+                stream.peek_token_span(),
+            )),
         }
     }
 }
@@ -71,7 +77,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         stream
             .peek_token()
-            .ok_or_else(|| E::expected_end(stream.source_span()))
+            .ok_or_else(|| E::new(E::Cause::expected_end(), stream.peek_token_span()))
     }
 }
 
@@ -93,7 +99,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if (self.0)(&token) => Ok(token),
-            _ => Err(E::expected_match(stream.source_span())),
+            _ => Err(E::new(E::Cause::expected_match(), stream.peek_token_span())),
         }
     }
 }
@@ -116,10 +122,10 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if (self.0)(&token) => {
-                stream.advance();
+                stream.next_token();
                 Ok(token)
             }
-            _ => Err(E::expected_match(stream.source_span())),
+            _ => Err(E::new(E::Cause::expected_match(), stream.peek_token_span())),
         }
     }
 }
@@ -142,7 +148,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         stream
             .next_token()
-            .ok_or_else(|| E::expected_any(stream.source_span()))
+            .ok_or_else(|| E::new(E::Cause::expected_any(), stream.peek_token_span()))
     }
 }
 
@@ -165,7 +171,7 @@ where
         if stream.at_end() {
             Ok(())
         } else {
-            Err(E::expected_end(stream.source_span()))
+            Err(E::new(E::Cause::expected_end(), stream.peek_token_span()))
         }
     }
 }

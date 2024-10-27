@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use derive_where::derive_where;
 
-use crate::error::Error;
+use crate::error::{Error, ErrorCause};
 use crate::parser::Parser;
 use crate::stream::Stream;
 
@@ -25,14 +25,15 @@ macro_rules! impl_alt_parsers {
         {
             #[allow(non_snake_case)]
             #[inline]
-            fn parse_alt(&mut self, stream: &mut S) -> Result<Out, Err> {
+            fn parse_alt(&mut self, stream: &mut S) -> Result<Out, Err>
+            {
                 $(
                     if let Ok(output) = self.$n.parse(stream) {
                         return Ok(output);
                     }
                 )*
 
-                Err(Err::unknown(stream.source_span()))
+                Err(Err::new(Err::Cause::unknown(), stream.peek_token_span()))
             }
         }
     };

@@ -10,6 +10,9 @@ fn main() {
     let mut stream = CharStream::new("bat");
     let _ = dbg!(bar_bat.parse(&mut stream));
 
+    let mut stream = CharStream::new("bart");
+    let _ = dbg!(bar_bat.parse(&mut stream));
+
     let mut stream = CharStream::new("bap");
     let _ = dbg!(bar_bat.parse(&mut stream));
 }
@@ -20,9 +23,9 @@ fn bar_bat<'a>(
     chain!(
         eat('b'),
         eat('a'),
-        alt!(eat('r'), eat('t')).named("`r` or `t`")
+        alt!(eat('r'), eat('t')).with_err_cause(|| "expected `r` or `t`")
     )
     .then_drop(end())
-    .named("`bar` or `bat`")
+    .with_context(|| "while parsing `bar` or `bat`")
     .parse(stream)
 }
