@@ -77,7 +77,7 @@ pub struct NoCollection;
 impl<T> FromIterator<T> for NoCollection {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        iter.into_iter().for_each(|_| {});
+        for _ in iter {}
         NoCollection
     }
 }
