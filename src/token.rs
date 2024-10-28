@@ -184,3 +184,29 @@ where
         }
     }
 }
+
+#[inline]
+pub fn eat_while<F>(f: F) -> EatWhile<F> {
+    EatWhile { f }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EatWhile<F> {
+    pub(crate) f: F,
+}
+
+impl<F, S, E> Parser<S, S::SliceRef, E> for EatWhile<F>
+where
+    F: FnMut(&S::Token) -> bool,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+        let start = stream.stream_position();
+        while stream.peek_token().is_some_and(|t| (self.f)(&t)) {
+            stream.next_token();
+        }
+        let end = stream.stream_position();
+        Ok(stream.slice(start, end))
+    }
+}

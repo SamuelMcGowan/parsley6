@@ -9,7 +9,7 @@ use crate::{
             Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState, MapTo,
             MapToSlice, MapWithSlice, MapWithSpan, MapWithState,
         },
-        repeat::{NoCollection, Repeat},
+        repeat::{NoCollection, RepeatUntil},
     },
     error::Error,
     prelude::{prefixed, suffixed},
@@ -205,13 +205,28 @@ where
         suffixed(self, parser)
     }
 
+    // #[inline]
+    // fn repeat(self) -> Repeat<Self, NoCollection, S, O, E>
+    // where
+    //     Self: Sized,
+    // {
+    //     Repeat {
+    //         parser: self,
+    //         min: 0,
+    //         max: None,
+    //         _phantom: PhantomData,
+    //     }
+    // }
+
     #[inline]
-    fn repeat(self) -> Repeat<Self, NoCollection, S, O, E>
+    fn repeat_until<F>(self, f: F) -> RepeatUntil<Self, F, NoCollection, S, O, E>
     where
         Self: Sized,
+        F: FnMut(&S::Token) -> bool,
     {
-        Repeat {
+        RepeatUntil {
             parser: self,
+            f,
             min: 0,
             max: None,
             _phantom: PhantomData,
