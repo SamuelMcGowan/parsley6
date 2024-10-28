@@ -21,10 +21,9 @@ where
     E::Cause: From<Cause>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
-        self.parser.parse(stream).map_err(|mut err| {
-            err.set_cause((self.make_cause)().into());
-            err
-        })
+        self.parser
+            .parse(stream)
+            .map_err(|err| err.with_cause((self.make_cause)().into()))
     }
 }
 
@@ -46,11 +45,11 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         let start_span = stream.peek_token_span();
 
-        self.parser.parse(stream).map_err(|mut err| {
+        self.parser.parse(stream).map_err(|err| {
             let end_span = stream.prev_token_span();
             let span = merge_spans_right(start_span, end_span);
-            err.add_context((self.make_context)().into(), span);
-            err
+
+            err.with_context((self.make_context)().into(), span)
         })
     }
 }

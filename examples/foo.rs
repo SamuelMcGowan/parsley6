@@ -3,6 +3,8 @@ use parsley6::prelude::*;
 use parsley6::error::DefaultError;
 use parsley6::stream::CharStream;
 
+// type Error =
+
 fn main() {
     let mut stream = CharStream::new("bar");
     let _ = dbg!(bar_bat.parse(&mut stream));
