@@ -3,6 +3,7 @@ use std::{marker::PhantomData, num::NonZeroUsize};
 use crate::{
     error::{BuiltinCause, Error},
     parser::Parser,
+    prelude::TokenSet,
     stream::Stream,
 };
 
@@ -86,9 +87,9 @@ impl<T> FromIterator<T> for NoCollection {
     }
 }
 
-pub struct RepeatUntil<P, F, Collection, S, O, E> {
+pub struct RepeatUntil<P, T, Collection, S, O, E> {
     pub(crate) parser: P,
-    pub(crate) f: F,
+    pub(crate) token_set: T,
 
     pub(crate) min: usize,
     pub(crate) max: Option<NonZeroUsize>,
@@ -96,10 +97,10 @@ pub struct RepeatUntil<P, F, Collection, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (Collection, S, O, E)>,
 }
 
-impl<P, F, Collection, S, O, E> RepeatUntil<P, F, Collection, S, O, E>
+impl<P, T, Collection, S, O, E> RepeatUntil<P, T, Collection, S, O, E>
 where
     P: Parser<S, O, E>,
-    F: FnMut(&S::Token) -> bool,
+    T: TokenSet<S::Token>,
     Collection: FromIterator<O>,
     S: Stream,
     E: Error<S>,
@@ -117,10 +118,10 @@ where
     }
 
     #[inline]
-    pub fn collect<C: FromIterator<O>>(self) -> RepeatUntil<P, F, C, S, O, E> {
+    pub fn collect<C: FromIterator<O>>(self) -> RepeatUntil<P, T, C, S, O, E> {
         RepeatUntil {
             parser: self.parser,
-            f: self.f,
+            token_set: self.token_set,
             min: self.min,
             max: self.max,
             _phantom: PhantomData,
@@ -150,7 +151,7 @@ where
             }
 
             match stream.peek_token() {
-                Some(token) if !(self.f)(&token) => Some(self.parser.parse(stream)),
+                Some(token) if !(self.token_set)(&token) => Some(self.parser.parse(stream)),
                 _ if n < self.min => Some(Err(E::new(
                     BuiltinCause::Unknown.into(),
                     stream.peek_token_span(),

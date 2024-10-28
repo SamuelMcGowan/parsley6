@@ -36,7 +36,7 @@ fn test<'a, P: Parser<CharStream<'a>, T, Error<'a>>, T>(
     parser.parse(&mut stream)
 }
 
-fn bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
+fn _bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
     chain!(
         eat('b'),
         eat('a'),
@@ -58,11 +58,11 @@ fn bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
 //     .parse(stream)
 // }
 
-fn ident<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
+fn _ident<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
     chain!(
-        eat_match(|ch: &char| ch.is_ascii_alphabetic() || *ch == '_')
+        eat_in(|ch: &char| ch.is_ascii_alphabetic() || *ch == '_')
             .with_err_cause(|| "expected an alphabetic character or `_`"),
-        eat_while(|ch: &char| ch.is_ascii_alphanumeric() || *ch == '_')
+        eat_while_in(|ch: &char| ch.is_ascii_alphanumeric() || *ch == '_')
     )
     .map_to_slice()
     .parse(stream)
@@ -72,7 +72,7 @@ fn list<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
     between(
         eat('['),
         chain!(eat('b'), eat('c'))
-            .repeat_until(|ch| *ch == ']')
+            .repeat_until(|ch: &char| *ch == ']')
             .map_to_slice(),
         eat(']'),
     )

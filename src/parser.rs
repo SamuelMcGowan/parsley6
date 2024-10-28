@@ -12,7 +12,7 @@ use crate::{
         repeat::{NoCollection, RepeatUntil},
     },
     error::Error,
-    prelude::{prefixed, suffixed},
+    prelude::{prefixed, suffixed, TokenSet},
     stream::{BorrowState, Stream},
 };
 
@@ -218,15 +218,18 @@ where
     //     }
     // }
 
+    /// Repeat this parser until a token from the given token set is reached.
+    ///
+    /// Does not consume the token.
     #[inline]
-    fn repeat_until<F>(self, f: F) -> RepeatUntil<Self, F, NoCollection, S, O, E>
+    fn repeat_until<T>(self, token_set: T) -> RepeatUntil<Self, T, NoCollection, S, O, E>
     where
         Self: Sized,
-        F: FnMut(&S::Token) -> bool,
+        T: TokenSet<S::Token>,
     {
         RepeatUntil {
             parser: self,
-            f,
+            token_set,
             min: 0,
             max: None,
             _phantom: PhantomData,
