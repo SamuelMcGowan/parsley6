@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::Range};
+use std::marker::PhantomData;
 
 use crate::{
     combinator::{
@@ -6,8 +6,8 @@ use crate::{
         chain::{Prefixed, Suffixed},
         errors::{WithErrCause, WithErrContext},
         map::{
-            AndThen, Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState,
-            MapTo, MapToSlice, MapWithSlice, MapWithSpan, MapWithState, OrElse,
+            AndThen, Map, MapErr, MapErrTo, MapErrWithState, MapTo, MapWithState, OrElse, ToSlice,
+            WithSlice, WithSpan,
         },
         repeat::{NoCollection, RepeatUntil},
     },
@@ -56,36 +56,6 @@ where
         }
     }
 
-    /// Map the output of this parser to another value, with access to the parsed
-    /// value's source span.
-    #[inline]
-    fn map_with_span<F, OB>(self, f: F) -> MapWithSpan<Self, O, OB, F, S, E>
-    where
-        Self: Sized,
-        F: FnMut(O, Range<S::SourceLoc>) -> OB,
-    {
-        MapWithSpan {
-            parser: self,
-            f,
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Map the output of this parser to another value, with access to the parsed
-    /// value's source slice.
-    #[inline]
-    fn map_with_slice<F, OB>(self, f: F) -> MapWithSlice<Self, O, OB, F, S, E>
-    where
-        Self: Sized,
-        F: FnMut(O, S::SliceRef) -> OB,
-    {
-        MapWithSlice {
-            parser: self,
-            f,
-            _phantom: PhantomData,
-        }
-    }
-
     /// Map the output of this parser to a value without requiring a callback.
     #[inline]
     fn map_to<OB>(self, value: OB) -> MapTo<Self, O, OB, S, E>
@@ -96,18 +66,6 @@ where
         MapTo {
             parser: self,
             value,
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Map the output of this parser to the parsed value's source slice.
-    #[inline]
-    fn map_to_slice(self) -> MapToSlice<Self, S, O, E>
-    where
-        Self: Sized,
-    {
-        MapToSlice {
-            parser: self,
             _phantom: PhantomData,
         }
     }
@@ -135,36 +93,6 @@ where
         F: FnMut(E, &mut S::State) -> E,
     {
         MapErrWithState {
-            parser: self,
-            f,
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Map the error of this parser to another error, with access to the parsed
-    /// value's source span.
-    #[inline]
-    fn map_err_with_span<F>(self, f: F) -> MapErrWithSpan<Self, F, S, O, E>
-    where
-        Self: Sized,
-        F: FnMut(E, Range<S::SourceLoc>) -> E,
-    {
-        MapErrWithSpan {
-            parser: self,
-            f,
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Map the error of this parser to another error, with access to the parsed
-    /// value's source slice.
-    #[inline]
-    fn map_err_with_slice<F>(self, f: F) -> MapErrWithSlice<Self, F, S, O, E>
-    where
-        Self: Sized,
-        F: FnMut(E, S::SliceRef) -> E,
-    {
-        MapErrWithSlice {
             parser: self,
             f,
             _phantom: PhantomData,
@@ -209,6 +137,42 @@ where
         OrElse {
             parser: self,
             f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to the parsed value's source slice.
+    #[inline]
+    fn to_slice(self) -> ToSlice<Self, S, O, E>
+    where
+        Self: Sized,
+    {
+        ToSlice {
+            parser: self,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to `(output, slice)`.
+    #[inline]
+    fn with_slice(self) -> WithSlice<Self, S, O, E>
+    where
+        Self: Sized,
+    {
+        WithSlice {
+            parser: self,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to `(output, span)`.
+    #[inline]
+    fn with_span(self) -> WithSpan<Self, S, O, E>
+    where
+        Self: Sized,
+    {
+        WithSpan {
+            parser: self,
             _phantom: PhantomData,
         }
     }

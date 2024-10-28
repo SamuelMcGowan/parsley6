@@ -9,7 +9,7 @@ fn main() {}
 
 fn _parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, _ParseError<'a>> {
     eat_while_in(Ascii::is_ascii_digit)
-        .map_with_span(|s, span| (s, span))
+        .with_span()
         .and_then(|(s, span): (&str, _)| {
             s.parse::<i32>()
                 .map_err(|err| DefaultError::new(Cause::custom(err.to_string()), span))

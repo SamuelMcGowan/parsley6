@@ -50,57 +50,6 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapWithSpan<P, OA, OB, F, S, E> {
-    pub(crate) parser: P,
-    pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
-}
-
-impl<P, OA, OB, F, S, E> Parser<S, OB, E> for MapWithSpan<P, OA, OB, F, S, E>
-where
-    P: Parser<S, OA, E>,
-    F: FnMut(OA, Range<S::SourceLoc>) -> OB,
-    S: Stream,
-    E: Error<S>,
-{
-    fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
-        let start_span = stream.peek_token_span();
-
-        let output = self.parser.parse(stream)?;
-
-        let end_span = stream.prev_token_span();
-        let span = merge_spans_right(start_span, end_span);
-
-        Ok((self.f)(output, span))
-    }
-}
-
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapWithSlice<P, OA, OB, F, S, E> {
-    pub(crate) parser: P,
-    pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
-}
-
-impl<P, OA, OB, F, S, E> Parser<S, OB, E> for MapWithSlice<P, OA, OB, F, S, E>
-where
-    P: Parser<S, OA, E>,
-    F: FnMut(OA, S::SliceRef) -> OB,
-    S: Stream,
-    E: Error<S>,
-{
-    fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
-        let start = stream.stream_position();
-        let output = self.parser.parse(stream)?;
-        let end = stream.stream_position();
-
-        let slice = stream.slice(start, end);
-
-        Ok((self.f)(output, slice))
-    }
-}
-
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, OB)]
 pub struct MapTo<P, OA, OB, S, E> {
     pub(crate) parser: P,
@@ -117,27 +66,6 @@ where
 {
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
         self.parser.parse(stream).map(|_| self.value.clone())
-    }
-}
-
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
-pub struct MapToSlice<P, S, O, E> {
-    pub(crate) parser: P,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
-}
-
-impl<P, S, O, E> Parser<S, S::SliceRef, E> for MapToSlice<P, S, O, E>
-where
-    P: Parser<S, O, E>,
-    S: Stream,
-    E: Error<S>,
-{
-    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
-        let start = stream.stream_position();
-        let _ = self.parser.parse(stream)?;
-        let end = stream.stream_position();
-
-        Ok(stream.slice(start, end))
     }
 }
 
@@ -179,64 +107,6 @@ where
         self.parser
             .parse(stream)
             .map_err(|err| (self.f)(err, stream.borrow_state_mut()))
-    }
-}
-
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapErrWithSpan<P, F, S, O, E> {
-    pub(crate) parser: P,
-    pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
-}
-
-impl<P, F, S, O, E> Parser<S, O, E> for MapErrWithSpan<P, F, S, O, E>
-where
-    P: Parser<S, O, E>,
-    F: FnMut(E, Range<S::SourceLoc>) -> E,
-    S: Stream,
-    E: Error<S>,
-{
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
-        let start_span = stream.peek_token_span();
-
-        let err = match self.parser.parse(stream) {
-            Ok(output) => return Ok(output),
-            Err(err) => err,
-        };
-
-        let end_span = stream.prev_token_span();
-        let span = merge_spans_right(start_span, end_span);
-
-        Err((self.f)(err, span))
-    }
-}
-
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapErrWithSlice<P, F, S, O, E> {
-    pub(crate) parser: P,
-    pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
-}
-
-impl<P, F, S, O, E> Parser<S, O, E> for MapErrWithSlice<P, F, S, O, E>
-where
-    P: Parser<S, O, E>,
-    F: FnMut(E, S::SliceRef) -> E,
-    S: Stream,
-    E: Error<S>,
-{
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
-        let start = stream.stream_position();
-
-        let err = match self.parser.parse(stream) {
-            Ok(output) => return Ok(output),
-            Err(err) => err,
-        };
-
-        let end = stream.stream_position();
-        let slice = stream.slice(start, end);
-
-        Err((self.f)(err, slice))
     }
 }
 
@@ -293,5 +163,67 @@ where
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser.parse(stream).or_else(&mut self.f)
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
+pub struct ToSlice<P, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, S, O, E> Parser<S, S::SliceRef, E> for ToSlice<P, S, O, E>
+where
+    P: Parser<S, O, E>,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+        let start = stream.stream_position();
+        let _ = self.parser.parse(stream)?;
+        let end = stream.stream_position();
+
+        Ok(stream.slice(start, end))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
+pub struct WithSlice<P, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, S, O, E> Parser<S, (O, S::SliceRef), E> for WithSlice<P, S, O, E>
+where
+    P: Parser<S, O, E>,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<(O, S::SliceRef), E> {
+        let start = stream.stream_position();
+        let output = self.parser.parse(stream)?;
+        let end = stream.stream_position();
+        Ok((output, stream.slice(start, end)))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
+pub struct WithSpan<P, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, S, O, E> Parser<S, (O, Range<S::SourceLoc>), E> for WithSpan<P, S, O, E>
+where
+    P: Parser<S, O, E>,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<(O, Range<S::SourceLoc>), E> {
+        let start_span = stream.peek_token_span();
+        let output = self.parser.parse(stream)?;
+        let end_span = stream.prev_token_span();
+        let span = merge_spans_right(start_span, end_span);
+        Ok((output, span))
     }
 }
