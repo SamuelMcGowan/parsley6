@@ -8,6 +8,7 @@ use crate::{
             Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState, MapTo,
             MapToSlice, MapWithSlice, MapWithSpan, MapWithState,
         },
+        repeat::{NoCollection, Repeat},
     },
     error::Error,
     prelude::{prefixed, suffixed},
@@ -201,6 +202,19 @@ where
         P: Parser<S, POutput, E>,
     {
         suffixed(self, parser)
+    }
+
+    #[inline]
+    fn repeat(self) -> Repeat<Self, NoCollection, S, O, E>
+    where
+        Self: Sized,
+    {
+        Repeat {
+            parser: self,
+            min: 0,
+            max: None,
+            _phantom: PhantomData,
+        }
     }
 
     /// Creates a parser with a custom cause for error messages.
