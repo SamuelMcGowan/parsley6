@@ -2,7 +2,7 @@
 
 pub mod text;
 
-use crate::error::{BuiltinCause, Error};
+use crate::error::{Cause, Error};
 use crate::parser::Parser;
 use crate::prelude::TokenSet;
 use crate::stream::Stream;
@@ -25,7 +25,7 @@ where
         match stream.peek_token() {
             Some(token) if token == self.0 => Ok(token),
             _ => Err(E::new(
-                BuiltinCause::ExpectedToken(self.0.clone()).into(),
+                Cause::ExpectedToken(self.0.clone()),
                 stream.peek_token_span(),
             )),
         }
@@ -53,7 +53,7 @@ where
                 Ok(token)
             }
             _ => Err(E::new(
-                BuiltinCause::ExpectedToken(self.0.clone()).into(),
+                Cause::ExpectedToken(self.0.clone()),
                 stream.peek_token_span(),
             )),
         }
@@ -78,11 +78,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
             Some(token) if self.0.contains(&token) => Ok(token),
-            _ => Err(E::new(
-                // TODO: rename variant
-                BuiltinCause::ExpectedMatch.into(),
-                stream.peek_token_span(),
-            )),
+            _ => Err(E::new(Cause::ExpectedInSet, stream.peek_token_span())),
         }
     }
 }
@@ -108,10 +104,7 @@ where
                 stream.next_token();
                 Ok(token)
             }
-            _ => Err(E::new(
-                BuiltinCause::ExpectedMatch.into(),
-                stream.peek_token_span(),
-            )),
+            _ => Err(E::new(Cause::ExpectedInSet, stream.peek_token_span())),
         }
     }
 }
@@ -135,10 +128,7 @@ where
         if stream.at_end() {
             Ok(())
         } else {
-            Err(E::new(
-                BuiltinCause::ExpectedEnd.into(),
-                stream.peek_token_span(),
-            ))
+            Err(E::new(Cause::ExpectedEnd, stream.peek_token_span()))
         }
     }
 }

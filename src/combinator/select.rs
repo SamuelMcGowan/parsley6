@@ -6,7 +6,7 @@ macro_rules! select {
                 $(Some($pat) $(if $cond)? => $expr.parse(stream),)+
 
                 _ => Err($crate::error::Error::new(
-                    $crate::error::BuiltinCause::Unknown.into(),
+                    $crate::error::Cause::Unknown,
                     $crate::stream::Stream::peek_token_span(stream),
                 )),
             }

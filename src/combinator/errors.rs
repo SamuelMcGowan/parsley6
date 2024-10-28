@@ -1,29 +1,28 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error,
+    error::{Cause, Error},
     parser::Parser,
     stream::{merge_spans_right, Stream},
 };
 
-pub struct WithErrCause<P, MakeCause, Cause, S, O, E> {
+pub struct WithErrCause<P, MakeCause, S, O, E> {
     pub(crate) parser: P,
     pub(crate) make_cause: MakeCause,
-    pub(crate) _phantom: PhantomData<*const (Cause, S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, MakeCause, Cause, S, O, E> Parser<S, O, E> for WithErrCause<P, MakeCause, Cause, S, O, E>
+impl<P, MakeCause, S, O, E> Parser<S, O, E> for WithErrCause<P, MakeCause, S, O, E>
 where
     P: Parser<S, O, E>,
-    MakeCause: FnMut() -> Cause,
+    MakeCause: FnMut() -> Cause<S, E::CustomCause>,
     S: Stream,
     E: Error<S>,
-    E::Cause: From<Cause>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser
             .parse(stream)
-            .map_err(|err| err.with_cause((self.make_cause)().into()))
+            .map_err(|err| err.with_cause((self.make_cause)()))
     }
 }
 

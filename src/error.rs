@@ -5,55 +5,63 @@ use derive_where::derive_where;
 use crate::stream::Stream;
 
 pub trait Error<S: Stream>: Sized {
-    type Cause: From<BuiltinCause<S>>;
     type Context;
+    type CustomCause;
 
-    fn new(cause: Self::Cause, span: Range<S::SourceLoc>) -> Self;
+    fn new(cause: Cause<S, Self::CustomCause>, span: Range<S::SourceLoc>) -> Self;
 
-    fn with_cause(self, cause: Self::Cause) -> Self;
+    fn with_cause(self, cause: Cause<S, Self::CustomCause>) -> Self;
     fn with_context(self, context: Self::Context, span: Range<S::SourceLoc>) -> Self;
 
     fn span(&self) -> Range<S::SourceLoc>;
 }
 
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token)]
-pub enum BuiltinCause<S: Stream> {
-    ExpectedToken(S::Token),
-    ExpectedMatch,
-    ExpectedAny,
-    ExpectedEnd,
+#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, Custom)]
+pub enum Cause<S: Stream, Custom> {
+    Custom(Custom),
     Unknown,
+
+    ExpectedToken(S::Token),
+    ExpectedInSet,
+    ExpectedEnd,
 }
 
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::SourceLoc)]
-pub enum DefaultError<S: Stream> {
+impl<S: Stream, Custom> Cause<S, Custom> {
+    #[inline]
+    pub fn custom(custom: impl Into<Custom>) -> Self {
+        Self::Custom(custom.into())
+    }
+}
+
+#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::SourceLoc, CustomCause)]
+pub enum DefaultError<S: Stream, CustomCause = Box<str>> {
     Error {
-        cause: DefaultErrorCause<S>,
+        cause: Cause<S, CustomCause>,
         span: Range<S::SourceLoc>,
     },
 
     WithContext {
         context: Box<str>,
         span: Range<S::SourceLoc>,
-        inner: Box<DefaultError<S>>,
+        inner: Box<DefaultError<S, CustomCause>>,
     },
 }
 
-impl<S> Error<S> for DefaultError<S>
+impl<S, CustomCause> Error<S> for DefaultError<S, CustomCause>
 where
     S: Stream,
     S::SourceLoc: Clone,
 {
-    type Cause = DefaultErrorCause<S>;
     type Context = Box<str>;
+    type CustomCause = CustomCause;
 
     #[inline]
-    fn new(kind: DefaultErrorCause<S>, span: Range<S::SourceLoc>) -> Self {
+    fn new(kind: Cause<S, Self::CustomCause>, span: Range<S::SourceLoc>) -> Self {
         Self::Error { cause: kind, span }
     }
 
     #[inline]
-    fn with_cause(self, cause: Self::Cause) -> Self {
+    fn with_cause(self, cause: Cause<S, Self::CustomCause>) -> Self {
         match self {
             Self::Error { span, cause: _ } => Self::Error { cause, span },
 
@@ -83,32 +91,5 @@ where
         match self {
             Self::Error { span, .. } | Self::WithContext { span, .. } => span.clone(),
         }
-    }
-}
-
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token)]
-pub enum DefaultErrorCause<S: Stream> {
-    Builtin(BuiltinCause<S>),
-    Custom(Box<str>),
-}
-
-impl<S: Stream> From<BuiltinCause<S>> for DefaultErrorCause<S> {
-    #[inline]
-    fn from(cause: BuiltinCause<S>) -> Self {
-        DefaultErrorCause::Builtin(cause)
-    }
-}
-
-impl<S: Stream, T: Into<Box<str>>> From<T> for DefaultErrorCause<S> {
-    #[inline]
-    fn from(message: T) -> Self {
-        DefaultErrorCause::Custom(message.into())
-    }
-}
-
-impl<S: Stream> DefaultErrorCause<S> {
-    #[inline]
-    pub fn custom(message: impl Into<Box<str>>) -> Self {
-        Self::Custom(message.into())
     }
 }

@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, num::NonZeroUsize};
 
 use crate::{
-    error::{BuiltinCause, Error},
+    error::{Cause, Error},
     parser::Parser,
     prelude::TokenSet,
     stream::Stream,
@@ -152,10 +152,7 @@ where
 
             match stream.peek_token() {
                 Some(token) if !(self.token_set)(&token) => Some(self.parser.parse(stream)),
-                _ if n < self.min => Some(Err(E::new(
-                    BuiltinCause::Unknown.into(),
-                    stream.peek_token_span(),
-                ))),
+                _ if n < self.min => Some(Err(E::new(Cause::Unknown, stream.peek_token_span()))),
                 _ => None,
             }
         })

@@ -11,6 +11,7 @@ mod sealed {
 }
 
 pub mod prelude {
+    pub use crate::error::Cause;
     pub use crate::parser::Parser;
 
     pub use crate::token_set::TokenSet;

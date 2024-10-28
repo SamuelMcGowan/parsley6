@@ -11,7 +11,7 @@ use crate::{
         },
         repeat::{NoCollection, RepeatUntil},
     },
-    error::Error,
+    error::{Cause, Error},
     prelude::{prefixed, suffixed, TokenSet},
     stream::{BorrowState, Stream},
 };
@@ -266,11 +266,10 @@ where
 
     /// Creates a parser with a custom cause for error messages.
     #[inline]
-    fn with_err_cause<F, Cause>(self, make_cause: F) -> WithErrCause<Self, F, Cause, S, O, E>
+    fn with_err_cause<F>(self, make_cause: F) -> WithErrCause<Self, F, S, O, E>
     where
         Self: Sized,
-        F: FnMut() -> Cause,
-        E::Cause: From<Cause>,
+        F: FnMut() -> Cause<S, E::CustomCause>,
     {
         WithErrCause {
             parser: self,
