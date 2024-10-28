@@ -19,5 +19,5 @@ pub mod prelude {
     pub use crate::token::{eat, eat_in, eat_while_in, end, peek, peek_in};
 
     pub use crate::combinator::chain::{between, prefixed, suffixed};
-    pub use crate::{alt, chain};
+    pub use crate::{chain, select};
 }

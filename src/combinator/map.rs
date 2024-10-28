@@ -257,3 +257,41 @@ where
         self.parser.parse(stream).map_err(|_| self.error.clone())
     }
 }
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct AndThen<P, F, OA, OB, S, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
+}
+
+impl<P, F, OA, OB, S, E> Parser<S, OB, E> for AndThen<P, F, OA, OB, S, E>
+where
+    P: Parser<S, OA, E>,
+    F: FnMut(OA) -> Result<OB, E>,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
+        self.parser.parse(stream).and_then(&mut self.f)
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct OrElse<P, F, S, O, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, S, O, E> Parser<S, O, E> for OrElse<P, F, S, O, E>
+where
+    P: Parser<S, O, E>,
+    F: FnMut(E) -> Result<O, E>,
+    S: Stream,
+    E: Error<S>,
+{
+    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+        self.parser.parse(stream).or_else(&mut self.f)
+    }
+}

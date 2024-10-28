@@ -6,8 +6,8 @@ use crate::{
         chain::{Prefixed, Suffixed},
         errors::{WithErrCause, WithErrContext},
         map::{
-            Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState, MapTo,
-            MapToSlice, MapWithSlice, MapWithSpan, MapWithState,
+            AndThen, Map, MapErr, MapErrTo, MapErrWithSlice, MapErrWithSpan, MapErrWithState,
+            MapTo, MapToSlice, MapWithSlice, MapWithSpan, MapWithState, OrElse,
         },
         repeat::{NoCollection, RepeatUntil},
     },
@@ -181,6 +181,34 @@ where
         MapErrTo {
             parser: self,
             error,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the output of this parser to a result value.
+    #[inline]
+    fn and_then<F, OB>(self, f: F) -> AndThen<Self, F, O, OB, S, E>
+    where
+        Self: Sized,
+        F: FnMut(O) -> Result<OB, E>,
+    {
+        AndThen {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to a result value.
+    #[inline]
+    fn or_else<F>(self, f: F) -> OrElse<Self, F, S, O, E>
+    where
+        Self: Sized,
+        F: FnMut(E) -> Result<O, E>,
+    {
+        OrElse {
+            parser: self,
+            f,
             _phantom: PhantomData,
         }
     }

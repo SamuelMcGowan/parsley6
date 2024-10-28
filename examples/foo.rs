@@ -40,7 +40,7 @@ fn _bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
     chain!(
         eat('b'),
         eat('a'),
-        alt!(eat('r'), eat('t')).with_err_cause(|| "expected `r` or `t`")
+        eat_in(['r', 't']).with_err_cause(|| "expected `r` or `t`")
     )
     .map_with_slice(|_, slice: &str| slice.to_ascii_uppercase())
     .then_drop(end())
@@ -76,5 +76,14 @@ fn list<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
             .map_to_slice(),
         eat(']'),
     )
+    .parse(stream)
+}
+
+fn abcdef<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
+    select!(
+        'a' => chain!(eat('a'), eat('b'), eat('c')),
+        'd' => chain!(eat('d'), eat('e'), eat('f')),
+    )
+    .map_to_slice()
     .parse(stream)
 }
