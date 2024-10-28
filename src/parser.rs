@@ -2,6 +2,7 @@ use std::{marker::PhantomData, ops::Range};
 
 use crate::{
     combinator::{
+        by_ref::ByRef,
         chain::{Prefixed, Suffixed},
         errors::{WithErrCause, WithErrContext},
         map::{
@@ -233,6 +234,7 @@ where
     }
 
     /// Creates a parser with additional context for error messages.
+    #[inline]
     fn with_err_context<F, Context>(
         self,
         make_context: F,
@@ -245,6 +247,15 @@ where
         WithErrContext {
             parser: self,
             make_context,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Create a new parser from this one without consuming it.
+    #[inline]
+    fn by_ref(&mut self) -> ByRef<Self, S, O, E> {
+        ByRef {
+            parser: self,
             _phantom: PhantomData,
         }
     }
