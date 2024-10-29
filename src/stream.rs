@@ -34,6 +34,7 @@ pub trait Stream {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CharStream<'a> {
     all: &'a str,
     chars: Chars<'a>,
@@ -111,6 +112,7 @@ impl<'a> Stream for CharStream<'a> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct SliceStream<'a, T: SourceSpanned> {
     all: &'a [T],
     iter: Iter<'a, T>,
@@ -187,6 +189,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StreamWithState<S: Stream, State> {
     pub stream: S,
     pub state: State,
