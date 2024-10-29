@@ -13,15 +13,12 @@ pub trait Stream {
     fn peek_token(&self) -> Option<Self::Token>;
     fn next_token(&mut self) -> Option<Self::Token>;
 
-    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef>;
-    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef>;
-
-    fn stream_position(&self) -> usize;
-
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef>;
 
     fn peek_token_span(&self) -> Range<Self::SourceLoc>;
     fn prev_token_span(&self) -> Range<Self::SourceLoc>;
+
+    fn stream_position(&self) -> usize;
 
     #[inline]
     fn at_end(&self) -> bool {
@@ -32,6 +29,11 @@ pub trait Stream {
     fn slice(&self, start: usize, end: usize) -> Self::SliceRef {
         self.try_slice(start, end).expect("slice out of bounds")
     }
+}
+
+pub trait StreamEatSlice<Slice: ?Sized>: Stream {
+    fn peek_slice(&self, slice: &Slice) -> Option<Self::SliceRef>;
+    fn eat_slice(&mut self, slice: &Slice) -> Option<Self::SliceRef>;
 }
 
 #[derive(Debug, Clone)]
@@ -69,26 +71,6 @@ impl<'a> Stream for CharStream<'a> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
-        self.chars
-            .as_str()
-            .split_at_checked(len)
-            .map(|(slice, _)| slice)
-    }
-
-    #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
-        let (slice, rest) = self.chars.as_str().split_at_checked(len)?;
-        self.chars = rest.chars();
-        Some(slice)
-    }
-
-    #[inline]
-    fn stream_position(&self) -> usize {
-        self.all.len() - self.chars.as_str().len()
-    }
-
-    #[inline]
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef> {
         self.all.get(start..end)
     }
@@ -109,6 +91,32 @@ impl<'a> Stream for CharStream<'a> {
             .map(char::len_utf8)
             .unwrap_or_default();
         (pos - ch_len)..pos
+    }
+
+    #[inline]
+    fn stream_position(&self) -> usize {
+        self.all.len() - self.chars.as_str().len()
+    }
+}
+
+impl<'a> StreamEatSlice<str> for CharStream<'a> {
+    #[inline]
+    fn peek_slice(&self, slice: &str) -> Option<Self::SliceRef> {
+        match self.chars.as_str().split_at_checked(slice.len()) {
+            Some((prefix, _)) if prefix == slice => Some(prefix),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn eat_slice(&mut self, slice: &str) -> Option<Self::SliceRef> {
+        match self.chars.as_str().split_at_checked(slice.len()) {
+            Some((prefix, rest)) if prefix == slice => {
+                self.chars = rest.chars();
+                Some(prefix)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -149,26 +157,6 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
-        self.iter
-            .as_slice()
-            .split_at_checked(len)
-            .map(|(slice, _)| slice)
-    }
-
-    #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
-        let (slice, rest) = self.iter.as_slice().split_at_checked(len)?;
-        self.iter = rest.iter();
-        Some(slice)
-    }
-
-    #[inline]
-    fn stream_position(&self) -> usize {
-        self.all.len() - self.iter.as_slice().len()
-    }
-
-    #[inline]
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef> {
         self.all.get(start..end)
     }
@@ -186,6 +174,32 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
             .last()
             .map(|t| t.source_span())
             .unwrap_or_default()
+    }
+
+    #[inline]
+    fn stream_position(&self) -> usize {
+        self.all.len() - self.iter.as_slice().len()
+    }
+}
+
+impl<'a, T: SourceSpanned + Clone + PartialEq> StreamEatSlice<[T]> for SliceStream<'a, T> {
+    #[inline]
+    fn peek_slice(&self, slice: &[T]) -> Option<Self::SliceRef> {
+        match self.iter.as_slice().split_at_checked(slice.len()) {
+            Some((prefix, _)) if prefix == slice => Some(prefix),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn eat_slice(&mut self, slice: &[T]) -> Option<Self::SliceRef> {
+        match self.iter.as_slice().split_at_checked(slice.len()) {
+            Some((prefix, rest)) if prefix == slice => {
+                self.iter = rest.iter();
+                Some(prefix)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -221,21 +235,6 @@ impl<S: Stream, State> Stream for StreamWithState<S, State> {
     }
 
     #[inline]
-    fn peek_slice(&self, len: usize) -> Option<Self::SliceRef> {
-        self.stream.peek_slice(len)
-    }
-
-    #[inline]
-    fn next_slice(&mut self, len: usize) -> Option<Self::SliceRef> {
-        self.stream.next_slice(len)
-    }
-
-    #[inline]
-    fn stream_position(&self) -> usize {
-        self.stream.stream_position()
-    }
-
-    #[inline]
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef> {
         self.stream.try_slice(start, end)
     }
@@ -251,8 +250,27 @@ impl<S: Stream, State> Stream for StreamWithState<S, State> {
     }
 
     #[inline]
+    fn stream_position(&self) -> usize {
+        self.stream.stream_position()
+    }
+
+    #[inline]
     fn at_end(&self) -> bool {
         self.stream.at_end()
+    }
+}
+
+impl<S: Stream + StreamEatSlice<Slice>, State, Slice> StreamEatSlice<Slice>
+    for StreamWithState<S, State>
+{
+    #[inline]
+    fn peek_slice(&self, slice: &Slice) -> Option<S::SliceRef> {
+        self.stream.peek_slice(slice)
+    }
+
+    #[inline]
+    fn eat_slice(&mut self, slice: &Slice) -> Option<S::SliceRef> {
+        self.stream.eat_slice(slice)
     }
 }
 

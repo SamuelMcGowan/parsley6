@@ -5,7 +5,7 @@ pub mod text;
 use crate::error::{Cause, Error};
 use crate::parser::Parser;
 use crate::prelude::TokenSet;
-use crate::stream::Stream;
+use crate::stream::{Stream, StreamEatSlice};
 
 #[inline]
 pub fn peek<T>(token: T) -> Peek<T> {
@@ -110,6 +110,50 @@ where
 }
 
 #[inline]
+pub fn peek_slice<Slice: ?Sized>(slice: &Slice) -> PeekSlice<Slice> {
+    PeekSlice(slice)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PeekSlice<'a, Slice: ?Sized>(&'a Slice);
+
+impl<'a, Slice, S, E> Parser<S, S::SliceRef, E> for PeekSlice<'a, Slice>
+where
+    Slice: ?Sized,
+    S: StreamEatSlice<Slice>,
+    E: Error<S>,
+{
+    #[inline]
+    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+        stream
+            .peek_slice(self.0)
+            .ok_or_else(|| E::new(Cause::ExpectedSlice, stream.peek_token_span()))
+    }
+}
+
+#[inline]
+pub fn eat_slice<Slice: ?Sized>(slice: &Slice) -> EatSlice<Slice> {
+    EatSlice(slice)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EatSlice<'a, Slice: ?Sized>(&'a Slice);
+
+impl<'a, Slice, S, E> Parser<S, S::SliceRef, E> for EatSlice<'a, Slice>
+where
+    Slice: ?Sized,
+    S: StreamEatSlice<Slice>,
+    E: Error<S>,
+{
+    #[inline]
+    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+        stream
+            .eat_slice(self.0)
+            .ok_or_else(|| E::new(Cause::ExpectedSlice, stream.peek_token_span()))
+    }
+}
+
+#[inline]
 pub fn end() -> End {
     End {}
 }
@@ -149,6 +193,7 @@ where
     S: Stream,
     E: Error<S>,
 {
+    #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
         let start = stream.stream_position();
         while stream

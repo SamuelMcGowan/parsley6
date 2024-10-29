@@ -3,10 +3,24 @@ use parsley6::prelude::*;
 use parsley6::error::{DefaultError, Error};
 use parsley6::stream::CharStream;
 
-type _ParseError<'a> = DefaultError<CharStream<'a>, ParseErrorCause>;
+type ParseError<'a> = DefaultError<CharStream<'a>, ParseErrorCause>;
 
+#[derive(Debug, Clone)]
 pub enum ParseErrorCause {
+    Expected(String),
     IntError(std::num::ParseIntError),
+}
+
+impl From<String> for ParseErrorCause {
+    fn from(s: String) -> Self {
+        ParseErrorCause::Expected(s)
+    }
+}
+
+impl From<&str> for ParseErrorCause {
+    fn from(s: &str) -> Self {
+        ParseErrorCause::Expected(s.to_owned())
+    }
 }
 
 impl From<std::num::ParseIntError> for ParseErrorCause {
@@ -15,9 +29,35 @@ impl From<std::num::ParseIntError> for ParseErrorCause {
     }
 }
 
-fn main() {}
+fn main() {
+    let mut stream = CharStream::new("true");
+    let _ = dbg!(parse_value(&mut stream));
 
-fn _parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, _ParseError<'a>> {
+    let mut stream = CharStream::new("foo");
+    let _ = dbg!(parse_value(&mut stream));
+
+    let mut stream = CharStream::new("1000000000000000000000000000000");
+    let _ = dbg!(parse_value(&mut stream));
+}
+
+#[derive(Debug, Clone)]
+enum Value {
+    Number(i32),
+    Bool(bool),
+    Null,
+}
+
+fn parse_value<'a>(stream: &mut CharStream<'a>) -> Result<Value, ParseError<'a>> {
+    select!(
+        't' => eat_slice("true").map_to(Value::Bool(true)).with_err_cause(|| Cause::custom("expected a value")),
+        'f' => eat_slice("false").map_to(Value::Bool(false)).with_err_cause(|| Cause::custom("expected a value")),
+        'n' => eat_slice("null").map_to(Value::Null).with_err_cause(|| Cause::custom("expected a value")),
+        ch if ch.is_ascii_digit() => parse_number.map(Value::Number).with_err_context(|| "while parsing a number"),
+    )
+    .parse(stream)
+}
+
+fn parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, ParseError<'a>> {
     eat_while_in(Ascii::is_ascii_digit)
         .with_span()
         .and_then(|(s, span): (&str, _)| {

@@ -22,6 +22,7 @@ pub enum Cause<S: Stream, Custom> {
     Unknown,
 
     ExpectedToken(S::Token),
+    ExpectedSlice,
     ExpectedInSet,
     ExpectedEnd,
 }
