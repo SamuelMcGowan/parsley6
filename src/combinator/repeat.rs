@@ -1,5 +1,7 @@
 use std::{marker::PhantomData, num::NonZeroUsize};
 
+use derive_where::derive_where;
+
 use crate::{
     error::{Cause, Error},
     parser::Parser,
@@ -7,6 +9,7 @@ use crate::{
     stream::Stream,
 };
 
+// #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
 // pub struct Repeat<P, Collection, S, O, E> {
 //     pub(crate) parser: P,
 //     pub(crate) min: usize,
@@ -51,7 +54,6 @@ use crate::{
 //     S: Stream,
 //     E: Error<S>,
 // {
-//     #[inline]
 //     fn parse(&mut self, stream: &mut S) -> Result<Collection, E> {
 //         let mut n = 0;
 
@@ -77,6 +79,7 @@ use crate::{
 //     }
 // }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NoCollection;
 
 impl<T> FromIterator<T> for NoCollection {
@@ -87,6 +90,7 @@ impl<T> FromIterator<T> for NoCollection {
     }
 }
 
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, T)]
 pub struct RepeatUntil<P, T, Collection, S, O, E> {
     pub(crate) parser: P,
     pub(crate) token_set: T,
@@ -137,7 +141,6 @@ where
     S: Stream,
     E: Error<S>,
 {
-    #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<Collection, E> {
         debug_assert!(self.max.is_none_or(|m| m.get() >= self.min));
 

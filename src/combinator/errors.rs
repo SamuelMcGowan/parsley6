@@ -1,11 +1,14 @@
 use std::marker::PhantomData;
 
+use derive_where::derive_where;
+
 use crate::{
     error::{Cause, Error},
     parser::Parser,
     stream::{merge_spans_right, Stream},
 };
 
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, MakeCause)]
 pub struct WithErrCause<P, MakeCause, S, O, E> {
     pub(crate) parser: P,
     pub(crate) make_cause: MakeCause,
@@ -26,6 +29,7 @@ where
     }
 }
 
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, MakeContext)]
 pub struct WithErrContext<P, MakeContext, Context, S, O, E> {
     pub(crate) parser: P,
     pub(crate) make_context: MakeContext,
