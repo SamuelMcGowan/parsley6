@@ -111,13 +111,13 @@ impl<'a> Stream for CharStream<'a> {
     }
 }
 
-pub struct SliceIter<'a, T: SourceSpanned> {
+pub struct SliceStream<'a, T: SourceSpanned> {
     all: &'a [T],
     iter: Iter<'a, T>,
     end: T::SourcePosition,
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> SliceIter<'a, T> {
+impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
     #[inline]
     pub fn new(slice: &'a [T], end: T::SourcePosition) -> Self {
         Self {
@@ -128,7 +128,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> SliceIter<'a, T> {
     }
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceIter<'a, T> {
+impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     type Token = &'a T;
 
     type Slice = [T];
