@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use derive_where::derive_where;
 
 use crate::stream::Stream;
@@ -8,12 +6,12 @@ pub trait Error<S: Stream>: Sized {
     type Context;
     type CustomCause;
 
-    fn new(cause: Cause<S, Self::CustomCause>, span: Range<S::SourceLoc>) -> Self;
+    fn new(cause: Cause<S, Self::CustomCause>, span: S::Span) -> Self;
 
     fn with_cause(self, cause: Cause<S, Self::CustomCause>) -> Self;
-    fn with_context(self, context: Self::Context, span: Range<S::SourceLoc>) -> Self;
+    fn with_context(self, context: Self::Context, span: S::Span) -> Self;
 
-    fn span(&self) -> Range<S::SourceLoc>;
+    fn span(&self) -> S::Span;
 }
 
 #[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, Custom)]
@@ -34,16 +32,16 @@ impl<S: Stream, Custom> Cause<S, Custom> {
     }
 }
 
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::SourceLoc, CustomCause)]
+#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::Span, CustomCause)]
 pub enum DefaultError<S: Stream, CustomCause = Box<str>> {
     Error {
         cause: Cause<S, CustomCause>,
-        span: Range<S::SourceLoc>,
+        span: S::Span,
     },
 
     WithContext {
         context: Box<str>,
-        span: Range<S::SourceLoc>,
+        span: S::Span,
         inner: Box<DefaultError<S, CustomCause>>,
     },
 }
@@ -51,13 +49,12 @@ pub enum DefaultError<S: Stream, CustomCause = Box<str>> {
 impl<S, CustomCause> Error<S> for DefaultError<S, CustomCause>
 where
     S: Stream,
-    S::SourceLoc: Clone,
 {
     type Context = Box<str>;
     type CustomCause = CustomCause;
 
     #[inline]
-    fn new(kind: Cause<S, Self::CustomCause>, span: Range<S::SourceLoc>) -> Self {
+    fn new(kind: Cause<S, Self::CustomCause>, span: S::Span) -> Self {
         Self::Error { cause: kind, span }
     }
 
@@ -79,7 +76,7 @@ where
     }
 
     #[inline]
-    fn with_context(self, context: Self::Context, span: Range<S::SourceLoc>) -> Self {
+    fn with_context(self, context: Self::Context, span: S::Span) -> Self {
         Self::WithContext {
             context,
             span,
@@ -88,7 +85,7 @@ where
     }
 
     #[inline]
-    fn span(&self) -> Range<S::SourceLoc> {
+    fn span(&self) -> S::Span {
         match self {
             Self::Error { span, .. } | Self::WithContext { span, .. } => span.clone(),
         }

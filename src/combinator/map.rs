@@ -1,11 +1,11 @@
-use std::{marker::PhantomData, ops::Range};
+use std::marker::PhantomData;
 
 use derive_where::derive_where;
 
 use crate::{
     error::Error,
     parser::Parser,
-    stream::{merge_spans_right, BorrowState, Stream},
+    stream::{BorrowState, Span, Stream},
 };
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
@@ -213,17 +213,17 @@ pub struct WithSpan<P, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, S, O, E> Parser<S, (O, Range<S::SourceLoc>), E> for WithSpan<P, S, O, E>
+impl<P, S, O, E> Parser<S, (O, S::Span), E> for WithSpan<P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
     E: Error<S>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<(O, Range<S::SourceLoc>), E> {
+    fn parse(&mut self, stream: &mut S) -> Result<(O, S::Span), E> {
         let start_span = stream.peek_token_span();
         let output = self.parser.parse(stream)?;
         let end_span = stream.prev_token_span();
-        let span = merge_spans_right(start_span, end_span);
+        let span = start_span.merge_right(end_span);
         Ok((output, span))
     }
 }

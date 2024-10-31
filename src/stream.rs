@@ -8,15 +8,15 @@ pub trait Stream {
     type Slice: PartialEq + ?Sized;
     type SliceRef: Deref<Target = Self::Slice> + Copy;
 
-    type SourceLoc: Default + Clone + Ord;
+    type Span: Span + Default + Clone;
 
     fn peek_token(&self) -> Option<Self::Token>;
     fn next_token(&mut self) -> Option<Self::Token>;
 
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef>;
 
-    fn peek_token_span(&self) -> Range<Self::SourceLoc>;
-    fn prev_token_span(&self) -> Range<Self::SourceLoc>;
+    fn peek_token_span(&self) -> Self::Span;
+    fn prev_token_span(&self) -> Self::Span;
 
     fn stream_position(&self) -> usize;
 
@@ -34,6 +34,23 @@ pub trait Stream {
 pub trait StreamEatSlice<Slice: ?Sized>: Stream {
     fn peek_slice(&self, slice: &Slice) -> Option<Self::SliceRef>;
     fn eat_slice(&mut self, slice: &Slice) -> Option<Self::SliceRef>;
+}
+
+pub trait Span {
+    fn merge(self, other: Self) -> Self;
+    fn merge_right(self, other: Self) -> Self;
+}
+
+impl<T: Ord> Span for Range<T> {
+    #[inline]
+    fn merge(self, other: Self) -> Self {
+        self.start.min(other.start)..self.end.max(other.end)
+    }
+
+    #[inline]
+    fn merge_right(self, other: Self) -> Self {
+        self.start..self.end.max(other.end)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +75,7 @@ impl<'a> Stream for CharStream<'a> {
     type Slice = str;
     type SliceRef = &'a str;
 
-    type SourceLoc = usize;
+    type Span = Range<usize>;
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
@@ -76,14 +93,14 @@ impl<'a> Stream for CharStream<'a> {
     }
 
     #[inline]
-    fn peek_token_span(&self) -> Range<Self::SourceLoc> {
+    fn peek_token_span(&self) -> Range<usize> {
         let pos = self.stream_position();
         let ch_len = self.peek_token().map(char::len_utf8).unwrap_or_default();
         pos..(pos + ch_len)
     }
 
     #[inline]
-    fn prev_token_span(&self) -> Range<Self::SourceLoc> {
+    fn prev_token_span(&self) -> Range<usize> {
         let pos = self.stream_position();
         let ch_len = self.all[..pos]
             .chars()
@@ -124,12 +141,12 @@ impl<'a> StreamEatSlice<str> for CharStream<'a> {
 pub struct SliceStream<'a, T: SourceSpanned> {
     all: &'a [T],
     iter: Iter<'a, T>,
-    end: T::SourcePosition,
+    end: T::Span,
 }
 
 impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
     #[inline]
-    pub fn new(slice: &'a [T], end: T::SourcePosition) -> Self {
+    pub fn new(slice: &'a [T], end: T::Span) -> Self {
         Self {
             all: slice,
             iter: slice.iter(),
@@ -144,7 +161,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     type Slice = [T];
     type SliceRef = &'a [T];
 
-    type SourceLoc = T::SourcePosition;
+    type Span = T::Span;
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
@@ -162,14 +179,14 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     }
 
     #[inline]
-    fn peek_token_span(&self) -> Range<Self::SourceLoc> {
+    fn peek_token_span(&self) -> Self::Span {
         self.peek_token()
             .map(|t| t.source_span())
-            .unwrap_or_else(|| self.end.clone()..self.end.clone())
+            .unwrap_or_else(|| self.end.clone())
     }
 
     #[inline]
-    fn prev_token_span(&self) -> Range<Self::SourceLoc> {
+    fn prev_token_span(&self) -> Self::Span {
         self.all[..self.stream_position()]
             .last()
             .map(|t| t.source_span())
@@ -222,7 +239,7 @@ impl<S: Stream, State> Stream for StreamWithState<S, State> {
     type Slice = S::Slice;
     type SliceRef = S::SliceRef;
 
-    type SourceLoc = S::SourceLoc;
+    type Span = S::Span;
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
@@ -240,12 +257,12 @@ impl<S: Stream, State> Stream for StreamWithState<S, State> {
     }
 
     #[inline]
-    fn peek_token_span(&self) -> Range<Self::SourceLoc> {
+    fn peek_token_span(&self) -> Self::Span {
         self.stream.peek_token_span()
     }
 
     #[inline]
-    fn prev_token_span(&self) -> Range<Self::SourceLoc> {
+    fn prev_token_span(&self) -> Self::Span {
         self.stream.prev_token_span()
     }
 
@@ -299,11 +316,7 @@ impl<S: Stream, State> BorrowState for StreamWithState<S, State> {
 }
 
 pub trait SourceSpanned {
-    type SourcePosition: Default + Clone + Ord;
+    type Span: Span + Default + Clone;
 
-    fn source_span(&self) -> Range<Self::SourcePosition>;
-}
-
-pub(crate) fn merge_spans_right<T: Ord>(start: Range<T>, end: Range<T>) -> Range<T> {
-    start.start..end.end.max(start.end)
+    fn source_span(&self) -> Self::Span;
 }

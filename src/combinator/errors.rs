@@ -5,7 +5,7 @@ use derive_where::derive_where;
 use crate::{
     error::{Cause, Error},
     parser::Parser,
-    stream::{merge_spans_right, Stream},
+    stream::{Span, Stream},
 };
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, MakeCause)]
@@ -50,7 +50,7 @@ where
 
         self.parser.parse(stream).map_err(|err| {
             let end_span = stream.prev_token_span();
-            let span = merge_spans_right(start_span, end_span);
+            let span = start_span.merge_right(end_span);
 
             err.with_context((self.make_context)().into(), span)
         })
