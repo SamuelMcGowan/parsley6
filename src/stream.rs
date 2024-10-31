@@ -8,7 +8,7 @@ pub trait Stream {
     type Slice: PartialEq + ?Sized;
     type SliceRef: Deref<Target = Self::Slice> + Copy;
 
-    type Span: Span + Default + Clone;
+    type Span: Span + Clone;
 
     fn peek_token(&self) -> Option<Self::Token>;
     fn next_token(&mut self) -> Option<Self::Token>;
