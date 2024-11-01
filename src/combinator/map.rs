@@ -20,7 +20,7 @@ where
     P: Parser<S, OA, E>,
     F: FnMut(OA) -> OB,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
@@ -40,7 +40,7 @@ where
     P: Parser<S, OA, E>,
     F: FnMut(OA, &mut S::State) -> OB,
     S: Stream + BorrowState,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
@@ -62,7 +62,7 @@ where
     P: Parser<S, OA, E>,
     OB: Clone,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
         self.parser.parse(stream).map(|_| self.value.clone())
@@ -81,7 +81,7 @@ where
     P: Parser<S, O, E>,
     F: FnMut(E) -> E,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser.parse(stream).map_err(&mut self.f)
@@ -101,7 +101,7 @@ where
     S: BorrowState,
     F: FnMut(E, &mut S::State) -> E,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser
@@ -121,7 +121,7 @@ impl<P, S, O, E> Parser<S, O, E> for MapErrTo<P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
-    E: Error<S> + Clone,
+    E: Error<Stream = S> + Clone,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser.parse(stream).map_err(|_| self.error.clone())
@@ -140,7 +140,7 @@ where
     P: Parser<S, OA, E>,
     F: FnMut(OA) -> Result<OB, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
         self.parser.parse(stream).and_then(&mut self.f)
@@ -159,7 +159,7 @@ where
     P: Parser<S, O, E>,
     F: FnMut(E) -> Result<O, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser.parse(stream).or_else(&mut self.f)
@@ -176,7 +176,7 @@ impl<P, S, O, E> Parser<S, S::SliceRef, E> for ToSlice<P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
         let start = stream.stream_position();
@@ -197,7 +197,7 @@ impl<P, S, O, E> Parser<S, (O, S::SliceRef), E> for WithSlice<P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<(O, S::SliceRef), E> {
         let start = stream.stream_position();
@@ -217,7 +217,7 @@ impl<P, S, O, E> Parser<S, (O, S::Span), E> for WithSpan<P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<(O, S::Span), E> {
         let start_span = stream.peek_token_span();

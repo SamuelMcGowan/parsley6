@@ -16,7 +16,7 @@ impl<'a, P, S, O, E> Parser<S, O, E> for ByRef<'a, P, S, O, E>
 where
     P: Parser<S, O, E>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {

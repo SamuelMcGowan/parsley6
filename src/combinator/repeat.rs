@@ -107,7 +107,7 @@ where
     T: TokenSet<S::Token>,
     Collection: FromIterator<O>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     #[inline]
     pub fn min(mut self, min: usize) -> Self {
@@ -139,7 +139,7 @@ where
     F: FnMut(&S::Token) -> bool,
     Collection: FromIterator<O>,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<Collection, E> {
         debug_assert!(self.max.is_none_or(|m| m.get() >= self.min));
@@ -155,7 +155,9 @@ where
 
             match stream.peek_token() {
                 Some(token) if !(self.token_set)(&token) => Some(self.parser.parse(stream)),
-                _ if n < self.min => Some(Err(E::new(Cause::Unknown, stream.peek_token_span()))),
+                _ if n < self.min => {
+                    Some(Err(E::new(E::Cause::unknown(), stream.peek_token_span())))
+                }
                 _ => None,
             }
         })

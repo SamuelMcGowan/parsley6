@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use derive_where::derive_where;
 
 use crate::{
-    error::{Cause, Error},
+    error::Error,
     parser::Parser,
     stream::{Span, Stream},
 };
@@ -18,9 +18,9 @@ pub struct WithErrCause<P, MakeCause, S, O, E> {
 impl<P, MakeCause, S, O, E> Parser<S, O, E> for WithErrCause<P, MakeCause, S, O, E>
 where
     P: Parser<S, O, E>,
-    MakeCause: FnMut() -> Cause<S, E::CustomCause>,
+    MakeCause: FnMut() -> E::Cause,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser
@@ -42,7 +42,7 @@ where
     P: Parser<S, O, E>,
     MakeContext: FnMut() -> Context,
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
     E::Context: From<Context>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {

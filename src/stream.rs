@@ -5,7 +5,7 @@ use std::str::Chars;
 pub trait Stream {
     type Token: Clone + PartialEq;
 
-    type Slice: PartialEq + ?Sized;
+    type Slice: PartialEq + ?Sized + 'static;
     type SliceRef: Deref<Target = Self::Slice> + Copy;
 
     type Span: Span + Clone;
@@ -155,7 +155,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
     }
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
+impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<'a, T> {
     type Token = &'a T;
 
     type Slice = [T];
@@ -199,7 +199,9 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> Stream for SliceStream<'a, T> {
     }
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> StreamEatSlice<[T]> for SliceStream<'a, T> {
+impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> StreamEatSlice<[T]>
+    for SliceStream<'a, T>
+{
     #[inline]
     fn peek_slice(&self, slice: &[T]) -> Option<Self::SliceRef> {
         match self.iter.as_slice().split_at_checked(slice.len()) {

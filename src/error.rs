@@ -2,64 +2,116 @@ use derive_where::derive_where;
 
 use crate::stream::Stream;
 
-pub trait Error<S: Stream>: Sized {
+pub trait Error {
+    type Stream: Stream;
+
+    type Cause: Cause;
     type Context;
-    type CustomCause;
 
-    fn new(cause: Cause<S, Self::CustomCause>, span: S::Span) -> Self;
+    fn new(cause: Self::Cause, span: <Self::Stream as Stream>::Span) -> Self;
 
-    fn with_cause(self, cause: Cause<S, Self::CustomCause>) -> Self;
-    fn with_context(self, context: Self::Context, span: S::Span) -> Self;
+    fn with_cause(self, cause: Self::Cause) -> Self;
+    fn with_context(self, context: Self::Context, span: <Self::Stream as Stream>::Span) -> Self;
 
-    fn span(&self) -> S::Span;
+    fn span(&self) -> <Self::Stream as Stream>::Span;
 }
 
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, Custom)]
-pub enum Cause<S: Stream, Custom> {
-    Custom(Custom),
-    Unknown,
+pub trait Cause {
+    fn expected_in_set() -> Self;
+    fn expected_end() -> Self;
+
+    fn unknown() -> Self;
+}
+
+pub trait CauseFromToken<Token>: Cause {
+    fn expected_token(token: Token) -> Self;
+}
+
+pub trait CauseFromSlice<Slice: ?Sized>: Cause {
+    fn expected_slice(slice: &'static Slice) -> Self;
+}
+
+#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, &'static S::Slice)]
+pub enum DefaultCause<S: Stream> {
+    Custom(Box<str>),
 
     ExpectedToken(S::Token),
-    ExpectedSlice,
+    ExpectedSlice(&'static S::Slice),
+
     ExpectedInSet,
     ExpectedEnd,
+
+    Unknown,
 }
 
-impl<S: Stream, Custom> Cause<S, Custom> {
+impl<S: Stream> DefaultCause<S> {
     #[inline]
-    pub fn custom(custom: impl Into<Custom>) -> Self {
+    pub fn custom(custom: impl Into<Box<str>>) -> Self {
         Self::Custom(custom.into())
     }
 }
 
-#[derive_where(Debug, Clone, PartialEq, Eq, Hash; S::Token, S::Span, CustomCause)]
-pub enum DefaultError<S: Stream, CustomCause = Box<str>> {
+impl<S: Stream> Cause for DefaultCause<S> {
+    #[inline]
+    fn expected_in_set() -> Self {
+        Self::ExpectedInSet
+    }
+
+    #[inline]
+    fn expected_end() -> Self {
+        Self::ExpectedEnd
+    }
+
+    #[inline]
+    fn unknown() -> Self {
+        Self::Unknown
+    }
+}
+
+impl<S: Stream> CauseFromToken<S::Token> for DefaultCause<S> {
+    #[inline]
+    fn expected_token(token: S::Token) -> Self {
+        Self::ExpectedToken(token)
+    }
+}
+
+impl<S: Stream> CauseFromSlice<S::Slice> for DefaultCause<S> {
+    #[inline]
+    fn expected_slice(slice: &'static S::Slice) -> Self {
+        Self::ExpectedSlice(slice)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DefaultError<S: Stream, C: Cause = DefaultCause<S>, Context = Box<str>> {
     Error {
-        cause: Cause<S, CustomCause>,
+        cause: C,
         span: S::Span,
     },
 
     WithContext {
-        context: Box<str>,
+        context: Context,
         span: S::Span,
-        inner: Box<DefaultError<S, CustomCause>>,
+        inner: Box<Self>,
     },
 }
 
-impl<S, CustomCause> Error<S> for DefaultError<S, CustomCause>
+impl<S, C, Context> Error for DefaultError<S, C, Context>
 where
     S: Stream,
+    C: Cause,
 {
-    type Context = Box<str>;
-    type CustomCause = CustomCause;
+    type Stream = S;
+
+    type Cause = C;
+    type Context = Context;
 
     #[inline]
-    fn new(kind: Cause<S, Self::CustomCause>, span: S::Span) -> Self {
-        Self::Error { cause: kind, span }
+    fn new(cause: Self::Cause, span: S::Span) -> Self {
+        Self::Error { cause, span }
     }
 
-    #[inline]
-    fn with_cause(self, cause: Cause<S, Self::CustomCause>) -> Self {
+    fn with_cause(self, cause: Self::Cause) -> Self {
         match self {
             Self::Error { span, cause: _ } => Self::Error { cause, span },
 
@@ -70,7 +122,7 @@ where
             } => Self::WithContext {
                 context,
                 span,
-                inner: Box::new(inner.with_cause(cause)),
+                inner: Box::new(Error::with_cause(*inner, cause)),
             },
         }
     }
@@ -87,7 +139,8 @@ where
     #[inline]
     fn span(&self) -> S::Span {
         match self {
-            Self::Error { span, .. } | Self::WithContext { span, .. } => span.clone(),
+            Self::Error { span, cause: _ } => span.clone(),
+            Self::WithContext { span, .. } => span.clone(),
         }
     }
 }

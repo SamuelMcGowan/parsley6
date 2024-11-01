@@ -1,6 +1,6 @@
 use parsley6::prelude::*;
 
-use parsley6::error::{DefaultError, Error};
+use parsley6::error::{Cause, CauseFromSlice, CauseFromToken, DefaultError, Error};
 use parsley6::stream::CharStream;
 
 type ParseError<'a> = DefaultError<CharStream<'a>, ParseErrorCause>;
@@ -8,7 +8,41 @@ type ParseError<'a> = DefaultError<CharStream<'a>, ParseErrorCause>;
 #[derive(Debug, Clone)]
 pub enum ParseErrorCause {
     Expected(String),
+
+    ExpectedChar(char),
+    ExpectedSlice(&'static str),
+
+    ExpectedInSet,
+    ExpectedEnd,
+    Unknown,
+
     IntError(std::num::ParseIntError),
+}
+
+impl Cause for ParseErrorCause {
+    fn expected_in_set() -> Self {
+        Self::ExpectedInSet
+    }
+
+    fn expected_end() -> Self {
+        Self::ExpectedEnd
+    }
+
+    fn unknown() -> Self {
+        Self::Unknown
+    }
+}
+
+impl CauseFromToken<char> for ParseErrorCause {
+    fn expected_token(token: char) -> Self {
+        ParseErrorCause::ExpectedChar(token)
+    }
+}
+
+impl CauseFromSlice<str> for ParseErrorCause {
+    fn expected_slice(slice: &'static str) -> Self {
+        ParseErrorCause::ExpectedSlice(slice)
+    }
 }
 
 impl From<String> for ParseErrorCause {
@@ -49,9 +83,9 @@ enum Value {
 
 fn parse_value<'a>(stream: &mut CharStream<'a>) -> Result<Value, ParseError<'a>> {
     select!(
-        't' => eat_slice("true").map_to(Value::Bool(true)).with_err_cause(|| Cause::custom("expected a value")),
-        'f' => eat_slice("false").map_to(Value::Bool(false)).with_err_cause(|| Cause::custom("expected a value")),
-        'n' => eat_slice("null").map_to(Value::Null).with_err_cause(|| Cause::custom("expected a value")),
+        't' => eat_slice("true").map_to(Value::Bool(true)).with_err_cause(|| "expected a value".into()),
+        'f' => eat_slice("false").map_to(Value::Bool(false)).with_err_cause(|| "expected a value".into()),
+        'n' => eat_slice("null").map_to(Value::Null).with_err_cause(|| "expected a value".into()),
         ch if ch.is_ascii_digit() => parse_number.map(Value::Number).with_err_context(|| "while parsing a number"),
     )
     .parse(stream)
@@ -62,7 +96,7 @@ fn parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, ParseError<'a>> 
         .with_span()
         .and_then(|(s, span): (&str, _)| {
             s.parse::<i32>()
-                .map_err(|err| DefaultError::new(Cause::custom(err), span))
+                .map_err(|err| DefaultError::new(err.into(), span))
         })
         .parse(stream)
 }

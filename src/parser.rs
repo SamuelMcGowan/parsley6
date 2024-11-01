@@ -11,7 +11,7 @@ use crate::{
         },
         repeat::{NoCollection, RepeatUntil},
     },
-    error::{Cause, Error},
+    error::Error,
     prelude::{prefixed, suffixed, TokenSet},
     stream::{BorrowState, Stream},
 };
@@ -19,7 +19,7 @@ use crate::{
 pub trait Parser<S, O, E>
 where
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
 {
     /// Run the parser on a stream.
     fn parse(&mut self, stream: &mut S) -> Result<O, E>;
@@ -233,7 +233,7 @@ where
     fn with_err_cause<F>(self, make_cause: F) -> WithErrCause<Self, F, S, O, E>
     where
         Self: Sized,
-        F: FnMut() -> Cause<S, E::CustomCause>,
+        F: FnMut() -> E::Cause,
     {
         WithErrCause {
             parser: self,
@@ -286,7 +286,7 @@ where
 impl<S, O, E, F> Parser<S, O, E> for F
 where
     S: Stream,
-    E: Error<S>,
+    E: Error<Stream = S>,
     F: FnMut(&mut S) -> Result<O, E>,
 {
     #[inline]
