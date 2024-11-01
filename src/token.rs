@@ -12,12 +12,10 @@ use crate::stream::{Stream, StreamEatSlice};
 #[inline]
 pub fn peek<T, S, E>(token: T) -> Peek<T, S, E>
 where
-    T: Clone,
-    S::Token: PartialEq<T>,
-    E::Cause: CauseFromToken<T>,
-
+    T: PartialEq<S::Token> + Clone,
     S: Stream,
     E: Error<Stream = S>,
+    E::Cause: CauseFromToken<T>,
 {
     Peek {
         token,
@@ -33,17 +31,15 @@ pub struct Peek<T, S, E> {
 
 impl<T, S, E> Parser<S, S::Token, E> for Peek<T, S, E>
 where
-    T: Clone,
-    S::Token: PartialEq<T>,
-    E::Cause: CauseFromToken<T>,
-
+    T: PartialEq<S::Token> + Clone,
     S: Stream,
     E: Error<Stream = S>,
+    E::Cause: CauseFromToken<T>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
-            Some(token) if token == self.token => Ok(token),
+            Some(token) if self.token == token => Ok(token),
             _ => Err(E::new(
                 E::Cause::expected_token(self.token.clone()),
                 stream.peek_token_span(),
@@ -55,12 +51,10 @@ where
 #[inline]
 pub fn eat<T, S, E>(token: T) -> Eat<T, S, E>
 where
-    T: Clone,
-    S::Token: PartialEq<T>,
-    E::Cause: CauseFromToken<T>,
-
+    T: PartialEq<S::Token> + Clone,
     S: Stream,
     E: Error<Stream = S>,
+    E::Cause: CauseFromToken<T>,
 {
     Eat {
         token,
@@ -76,17 +70,15 @@ pub struct Eat<T, S, E> {
 
 impl<T, S, E> Parser<S, S::Token, E> for Eat<T, S, E>
 where
-    T: Clone,
-    S::Token: PartialEq<T>,
-    E::Cause: CauseFromToken<T>,
-
+    T: PartialEq<S::Token> + Clone,
     S: Stream,
     E: Error<Stream = S>,
+    E::Cause: CauseFromToken<T>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
-            Some(token) if token == self.token => {
+            Some(token) if self.token == token => {
                 stream.next_token();
                 Ok(token)
             }
