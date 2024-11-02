@@ -63,6 +63,9 @@ fn main() {
     let mut stream = CharStream::new("true");
     let _ = dbg!(parse_value(&mut stream));
 
+    let mut stream = CharStream::new("12");
+    let _ = dbg!(parse_value(&mut stream));
+
     let mut stream = CharStream::new("foo");
     let _ = dbg!(parse_value(&mut stream));
 
@@ -88,7 +91,7 @@ fn parse_value<'a>(stream: &mut CharStream<'a>) -> Result<Value, ParseError<'a>>
 }
 
 fn parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, ParseError<'a>> {
-    eat_while(Ascii::is_ascii_digit)
+    consume(Ascii::is_ascii_digit)
         .with_span()
         .and_then(|(s, span): (&str, _)| {
             s.parse::<i32>()
