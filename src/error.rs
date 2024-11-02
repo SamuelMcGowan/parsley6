@@ -2,18 +2,16 @@ use derive_where::derive_where;
 
 use crate::stream::Stream;
 
-pub trait Error {
-    type Stream: Stream;
-
+pub trait Error<S: Stream> {
     type Cause: Cause;
     type Context;
 
-    fn new(cause: Self::Cause, span: <Self::Stream as Stream>::Span) -> Self;
+    fn new(cause: Self::Cause, span: S::Span) -> Self;
 
     fn with_cause(self, cause: Self::Cause) -> Self;
-    fn with_context(self, context: Self::Context, span: <Self::Stream as Stream>::Span) -> Self;
+    fn with_context(self, context: Self::Context, span: S::Span) -> Self;
 
-    fn span(&self) -> <Self::Stream as Stream>::Span;
+    fn span(&self) -> S::Span;
 }
 
 pub trait Cause {
@@ -96,13 +94,11 @@ pub enum DefaultError<S: Stream, C: Cause = DefaultCause<S>, Context = Box<str>>
     },
 }
 
-impl<S, C, Context> Error for DefaultError<S, C, Context>
+impl<S, C, Context> Error<S> for DefaultError<S, C, Context>
 where
     S: Stream,
     C: Cause,
 {
-    type Stream = S;
-
     type Cause = C;
     type Context = Context;
 

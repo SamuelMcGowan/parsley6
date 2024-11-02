@@ -20,7 +20,7 @@ where
     P: Parser<S, O, E>,
     MakeCause: FnMut() -> E::Cause,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser
@@ -42,7 +42,7 @@ where
     P: Parser<S, O, E>,
     MakeContext: FnMut() -> Context,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Context: From<Context>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {

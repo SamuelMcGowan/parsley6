@@ -14,7 +14,7 @@ pub fn peek<T, S, E>(token: T) -> Peek<T, S, E>
 where
     T: PartialEq<S::Token> + Clone,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromToken<T>,
 {
     Peek {
@@ -33,7 +33,7 @@ impl<T, S, E> Parser<S, S::Token, E> for Peek<T, S, E>
 where
     T: PartialEq<S::Token> + Clone,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromToken<T>,
 {
     #[inline]
@@ -53,7 +53,7 @@ pub fn eat<T, S, E>(token: T) -> Eat<T, S, E>
 where
     T: PartialEq<S::Token> + Clone,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromToken<T>,
 {
     Eat {
@@ -72,7 +72,7 @@ impl<T, S, E> Parser<S, S::Token, E> for Eat<T, S, E>
 where
     T: PartialEq<S::Token> + Clone,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromToken<T>,
 {
     #[inline]
@@ -95,7 +95,7 @@ pub fn peek_in<T, S, E>(token_set: T) -> PeekIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     PeekIn {
         token_set,
@@ -113,7 +113,7 @@ impl<T, S, E> Parser<S, S::Token, E> for PeekIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
@@ -132,7 +132,7 @@ pub fn eat_in<T, S, E>(token_set: T) -> EatIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     EatIn {
         token_set,
@@ -150,7 +150,7 @@ impl<T, S, E> Parser<S, S::Token, E> for EatIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
@@ -172,7 +172,7 @@ pub fn peek_slice<Slice, S, E>(slice: &'static Slice) -> PeekSlice<Slice, S, E>
 where
     Slice: ?Sized,
     S: StreamEatSlice<Slice>,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     PeekSlice {
         slice,
@@ -190,7 +190,7 @@ impl<Slice, S, E> Parser<S, S::SliceRef, E> for PeekSlice<Slice, S, E>
 where
     Slice: ?Sized,
     S: StreamEatSlice<Slice>,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromSlice<Slice>,
 {
     #[inline]
@@ -209,7 +209,7 @@ pub fn eat_slice<Slice, S, E>(slice: &'static Slice) -> EatSlice<Slice, S, E>
 where
     Slice: ?Sized,
     S: StreamEatSlice<Slice>,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     EatSlice {
         slice,
@@ -227,7 +227,7 @@ impl<Slice, S, E> Parser<S, S::SliceRef, E> for EatSlice<Slice, S, E>
 where
     Slice: ?Sized,
     S: StreamEatSlice<Slice>,
-    E: Error<Stream = S>,
+    E: Error<S>,
     E::Cause: CauseFromSlice<Slice>,
 {
     #[inline]
@@ -245,7 +245,7 @@ where
 pub fn end<S, E>() -> End<S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     End {
         _phantom: PhantomData,
@@ -261,7 +261,7 @@ pub struct End<S, E> {
 impl<S, E> Parser<S, (), E> for End<S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<(), E> {
@@ -278,7 +278,7 @@ pub fn eat_while_in<T, S, E>(token_set: T) -> EatWhileIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     EatWhileIn {
         token_set,
@@ -296,7 +296,7 @@ impl<T, S, E> Parser<S, S::SliceRef, E> for EatWhileIn<T, S, E>
 where
     T: TokenSet<S::Token>,
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {

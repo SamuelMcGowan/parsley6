@@ -19,7 +19,7 @@ use crate::{
 pub trait Parser<S, O, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     /// Run the parser on a stream.
     fn parse(&mut self, stream: &mut S) -> Result<O, E>;
@@ -286,7 +286,7 @@ where
 impl<S, O, E, F> Parser<S, O, E> for F
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     F: FnMut(&mut S) -> Result<O, E>,
 {
     #[inline]

@@ -9,7 +9,7 @@ use crate::stream::Stream;
 pub trait ChainedParsers<S, O, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
 {
     fn parse_chained(&mut self, stream: &mut S) -> Result<O, E>;
 }
@@ -20,7 +20,7 @@ macro_rules! impl_chained_parsers {
         ChainedParsers<S, ($($output,)*), Err> for ($($parser,)*)
         where
             S: Stream,
-            Err: Error<Stream = S>,
+            Err: Error<S>,
             $($parser: Parser<S, $output, Err>,)*
         {
             #[allow(non_snake_case)]
@@ -54,7 +54,7 @@ macro_rules! chain {
 pub fn chain_inner<S, O, E, Parsers>(parsers: Parsers) -> Chained<S, O, E, Parsers>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     Parsers: ChainedParsers<S, O, E>,
 {
     Chained {
@@ -72,7 +72,7 @@ pub struct Chained<S, O, E, Parsers> {
 impl<S, O, E, Parsers> Parser<S, O, E> for Chained<S, O, E, Parsers>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     Parsers: ChainedParsers<S, O, E>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
@@ -87,7 +87,7 @@ pub fn prefixed<A, B, S, AOutput, BOutput, E>(
 ) -> Prefixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -102,7 +102,7 @@ where
 pub struct Prefixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -114,7 +114,7 @@ where
 impl<A, B, AOutput, BOutput, S, E> Parser<S, BOutput, E> for Prefixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -131,7 +131,7 @@ pub fn suffixed<A, B, S, AOutput, BOutput, E>(
 ) -> Suffixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -146,7 +146,7 @@ where
 pub struct Suffixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -158,7 +158,7 @@ where
 impl<A, B, AOutput, BOutput, S, E> Parser<S, AOutput, E> for Suffixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
 {
@@ -177,7 +177,7 @@ pub fn between<A, B, C, S, AOutput, BOutput, COutput, E>(
 ) -> Between<A, B, C, AOutput, BOutput, COutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
     C: Parser<S, COutput, E>,
@@ -194,7 +194,7 @@ where
 pub struct Between<A, B, C, AOutput, BOutput, COutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
     C: Parser<S, COutput, E>,
@@ -209,7 +209,7 @@ impl<A, B, C, AOutput, BOutput, COutput, S, E> Parser<S, BOutput, E>
     for Between<A, B, C, AOutput, BOutput, COutput, S, E>
 where
     S: Stream,
-    E: Error<Stream = S>,
+    E: Error<S>,
     A: Parser<S, AOutput, E>,
     B: Parser<S, BOutput, E>,
     C: Parser<S, COutput, E>,
