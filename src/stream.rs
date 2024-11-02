@@ -156,7 +156,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
 }
 
 impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<'a, T> {
-    type Token = &'a T;
+    type Token = T;
 
     type Slice = [T];
     type SliceRef = &'a [T];
@@ -165,12 +165,12 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
-        self.iter.clone().next()
+        self.iter.clone().next().cloned()
     }
 
     #[inline]
     fn next_token(&mut self) -> Option<Self::Token> {
-        self.iter.next()
+        self.iter.next().cloned()
     }
 
     #[inline]
