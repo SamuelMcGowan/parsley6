@@ -46,7 +46,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<OB, E> {
         self.parser
             .parse(stream)
-            .map(|output| (self.f)(output, stream.borrow_state_mut()))
+            .map(|output| (self.f)(output, stream.borrow_state()))
     }
 }
 
@@ -106,7 +106,7 @@ where
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         self.parser
             .parse(stream)
-            .map_err(|err| (self.f)(err, stream.borrow_state_mut()))
+            .map_err(|err| (self.f)(err, stream.borrow_state()))
     }
 }
 

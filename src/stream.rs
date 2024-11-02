@@ -296,9 +296,7 @@ impl<S: Stream + StreamEatSlice<Slice>, State, Slice> StreamEatSlice<Slice>
 pub trait BorrowState: crate::sealed::Sealed {
     type State;
 
-    // TODO: do we need both of these?
-    fn borrow_state(&self) -> &Self::State;
-    fn borrow_state_mut(&mut self) -> &mut Self::State;
+    fn borrow_state(&mut self) -> &mut Self::State;
 }
 
 impl<S: Stream, State> crate::sealed::Sealed for StreamWithState<S, State> {}
@@ -307,12 +305,7 @@ impl<S: Stream, State> BorrowState for StreamWithState<S, State> {
     type State = State;
 
     #[inline]
-    fn borrow_state(&self) -> &Self::State {
-        &self.state
-    }
-
-    #[inline]
-    fn borrow_state_mut(&mut self) -> &mut Self::State {
+    fn borrow_state(&mut self) -> &mut Self::State {
         &mut self.state
     }
 }
