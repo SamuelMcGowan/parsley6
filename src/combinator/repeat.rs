@@ -91,7 +91,7 @@ impl<T> FromIterator<T> for NoCollection {
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, T)]
-pub struct RepeatUntil<P, T, Collection, S, O, E> {
+pub struct RepeatWhile<P, T, Collection, S, O, E> {
     pub(crate) parser: P,
     pub(crate) token_set: T,
 
@@ -101,7 +101,7 @@ pub struct RepeatUntil<P, T, Collection, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (Collection, S, O, E)>,
 }
 
-impl<P, T, Collection, S, O, E> RepeatUntil<P, T, Collection, S, O, E>
+impl<P, T, Collection, S, O, E> RepeatWhile<P, T, Collection, S, O, E>
 where
     P: Parser<S, O, E>,
     T: TokenSet<S::Token>,
@@ -122,8 +122,8 @@ where
     }
 
     #[inline]
-    pub fn collect<C: FromIterator<O>>(self) -> RepeatUntil<P, T, C, S, O, E> {
-        RepeatUntil {
+    pub fn collect<C: FromIterator<O>>(self) -> RepeatWhile<P, T, C, S, O, E> {
+        RepeatWhile {
             parser: self.parser,
             token_set: self.token_set,
             min: self.min,
@@ -133,7 +133,7 @@ where
     }
 }
 
-impl<P, F, Collection, S, O, E> Parser<S, Collection, E> for RepeatUntil<P, F, Collection, S, O, E>
+impl<P, F, Collection, S, O, E> Parser<S, Collection, E> for RepeatWhile<P, F, Collection, S, O, E>
 where
     P: Parser<S, O, E>,
     F: FnMut(&S::Token) -> bool,
@@ -154,7 +154,7 @@ where
             }
 
             match stream.peek_token() {
-                Some(token) if !(self.token_set)(&token) => Some(self.parser.parse(stream)),
+                Some(token) if (self.token_set)(&token) => Some(self.parser.parse(stream)),
                 _ if n < self.min => {
                     Some(Err(E::new(E::Cause::unknown(), stream.peek_token_span())))
                 }

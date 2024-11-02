@@ -10,7 +10,7 @@ use crate::{
             WithSlice, WithSpan,
         },
         recover::OrRecover,
-        repeat::{NoCollection, RepeatUntil},
+        repeat::{NoCollection, RepeatWhile},
     },
     error::{Error, ErrorWithContext, Report},
     prelude::{prefixed, suffixed, TokenSet},
@@ -211,16 +211,16 @@ where
     //     }
     // }
 
-    /// Repeat this parser until a token from the given token set is reached.
+    /// Repeat this parser while the next token matches.
     ///
-    /// Does not consume the token.
+    /// Does not consume the token matched.
     #[inline]
-    fn repeat_until<T>(self, token_set: T) -> RepeatUntil<Self, T, NoCollection, S, O, E>
+    fn repeat_while<T>(self, token_set: T) -> RepeatWhile<Self, T, NoCollection, S, O, E>
     where
         Self: Sized,
         T: TokenSet<S::Token>,
     {
-        RepeatUntil {
+        RepeatWhile {
             parser: self,
             token_set,
             min: 0,

@@ -73,7 +73,7 @@ fn list<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
     between(
         eat('['),
         chain!(eat('b'), eat('c'))
-            .repeat_until(|ch: &char| *ch == ']')
+            .repeat_while(|ch: &char| *ch != ']')
             .to_slice(),
         eat(']'),
     )
