@@ -162,7 +162,7 @@ where
 #[inline]
 pub fn peek_slice<S, E>(slice: &'static S::Slice) -> PeekSlice<S, E>
 where
-    S: Stream,
+    S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
     PeekSlice {
@@ -179,7 +179,7 @@ pub struct PeekSlice<S: Stream, E> {
 
 impl<S, E> Parser<S, S::SliceRef, E> for PeekSlice<S, E>
 where
-    S: Stream,
+    S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
     #[inline]
@@ -196,7 +196,7 @@ where
 #[inline]
 pub fn eat_slice<S, E>(slice: &'static S::Slice) -> EatSlice<S, E>
 where
-    S: Stream,
+    S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
     EatSlice {
@@ -213,7 +213,7 @@ pub struct EatSlice<S: Stream, E> {
 
 impl<S, E> Parser<S, S::SliceRef, E> for EatSlice<S, E>
 where
-    S: Stream,
+    S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
     #[inline]

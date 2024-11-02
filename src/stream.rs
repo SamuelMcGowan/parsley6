@@ -5,7 +5,7 @@ use std::str::Chars;
 pub trait Stream {
     type Token: PartialEq;
 
-    type Slice: PartialEq + ?Sized + 'static;
+    type Slice: ?Sized + 'static;
     type SliceRef: Deref<Target = Self::Slice> + Copy;
 
     type Span: Span;
@@ -13,8 +13,13 @@ pub trait Stream {
     fn peek_token(&self) -> Option<Self::Token>;
     fn next_token(&mut self) -> Option<Self::Token>;
 
-    fn peek_slice(&self, slice: &Self::Slice) -> Option<Self::SliceRef>;
-    fn eat_slice(&mut self, slice: &Self::Slice) -> Option<Self::SliceRef>;
+    fn peek_slice(&self, slice: &Self::Slice) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq;
+
+    fn eat_slice(&mut self, slice: &Self::Slice) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq;
 
     fn try_slice(&self, start: usize, end: usize) -> Option<Self::SliceRef>;
 
@@ -134,13 +139,13 @@ impl<'a> Stream for CharStream<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct SliceStream<'a, T: SourceSpanned> {
+pub struct SliceStream<'a, T: AsToken> {
     all: &'a [T],
     iter: Iter<'a, T>,
     end: T::Span,
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
+impl<'a, T: AsToken> SliceStream<'a, T> {
     #[inline]
     pub fn new(slice: &'a [T], end: T::Span) -> Self {
         Self {
@@ -151,8 +156,8 @@ impl<'a, T: SourceSpanned + Clone + PartialEq> SliceStream<'a, T> {
     }
 }
 
-impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<'a, T> {
-    type Token = T;
+impl<'a, T: AsToken> Stream for SliceStream<'a, T> {
+    type Token = T::Token;
 
     type Slice = [T];
     type SliceRef = &'a [T];
@@ -161,16 +166,19 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
 
     #[inline]
     fn peek_token(&self) -> Option<Self::Token> {
-        self.iter.clone().next().cloned()
+        self.iter.clone().next().map(|t| t.as_token())
     }
 
     #[inline]
     fn next_token(&mut self) -> Option<Self::Token> {
-        self.iter.next().cloned()
+        self.iter.next().map(|t| t.as_token())
     }
 
     #[inline]
-    fn peek_slice(&self, slice: &[T]) -> Option<Self::SliceRef> {
+    fn peek_slice(&self, slice: &[T]) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq,
+    {
         match self.iter.as_slice().split_at_checked(slice.len()) {
             Some((prefix, _)) if prefix == slice => Some(prefix),
             _ => None,
@@ -178,7 +186,10 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
     }
 
     #[inline]
-    fn eat_slice(&mut self, slice: &[T]) -> Option<Self::SliceRef> {
+    fn eat_slice(&mut self, slice: &[T]) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq,
+    {
         match self.iter.as_slice().split_at_checked(slice.len()) {
             Some((prefix, rest)) if prefix == slice => {
                 self.iter = rest.iter();
@@ -195,8 +206,10 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
 
     #[inline]
     fn peek_token_span(&self) -> Self::Span {
-        self.peek_token()
-            .map(|t| t.source_span())
+        self.iter
+            .clone()
+            .next()
+            .map(|t| t.as_span())
             .unwrap_or_else(|| self.end.clone())
     }
 
@@ -204,7 +217,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
     fn prev_token_span(&self) -> Self::Span {
         self.all[..self.stream_position()]
             .last()
-            .map(|t| t.source_span())
+            .map(|t| t.as_span())
             .unwrap_or_else(|| self.peek_token_span())
     }
 
@@ -212,6 +225,14 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
     fn stream_position(&self) -> usize {
         self.all.len() - self.iter.as_slice().len()
     }
+}
+
+pub trait AsToken: 'static {
+    type Token: PartialEq;
+    type Span: Span + Clone;
+
+    fn as_token(&self) -> Self::Token;
+    fn as_span(&self) -> Self::Span;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -246,12 +267,18 @@ impl<S: Stream, State> Stream for StreamWithState<S, State> {
     }
 
     #[inline]
-    fn peek_slice(&self, slice: &Self::Slice) -> Option<Self::SliceRef> {
+    fn peek_slice(&self, slice: &Self::Slice) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq,
+    {
         self.stream.peek_slice(slice)
     }
 
     #[inline]
-    fn eat_slice(&mut self, slice: &Self::Slice) -> Option<Self::SliceRef> {
+    fn eat_slice(&mut self, slice: &Self::Slice) -> Option<Self::SliceRef>
+    where
+        Self::Slice: PartialEq,
+    {
         self.stream.eat_slice(slice)
     }
 
@@ -299,7 +326,7 @@ impl<S: Stream, State> BorrowState for StreamWithState<S, State> {
 }
 
 pub trait SourceSpanned {
-    type Span: Span + Clone;
+    type Span: Span;
 
     fn source_span(&self) -> Self::Span;
 }
