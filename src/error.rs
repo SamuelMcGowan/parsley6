@@ -101,10 +101,10 @@ where
     C: Cause,
 {
     #[inline]
-    pub fn span(&self) -> S::Span {
+    pub fn span(&self) -> &S::Span {
         match self {
-            Self::Error { span, cause: _ } => span.clone(),
-            Self::WithContext { span, .. } => span.clone(),
+            Self::Error { span, cause: _ } => span,
+            Self::WithContext { span, .. } => span,
         }
     }
 }

@@ -3,12 +3,12 @@ use std::slice::Iter;
 use std::str::Chars;
 
 pub trait Stream {
-    type Token: Clone + PartialEq;
+    type Token: PartialEq;
 
     type Slice: PartialEq + ?Sized + 'static;
     type SliceRef: Deref<Target = Self::Slice> + Copy;
 
-    type Span: Span + Clone;
+    type Span: Span;
 
     fn peek_token(&self) -> Option<Self::Token>;
     fn next_token(&mut self) -> Option<Self::Token>;
