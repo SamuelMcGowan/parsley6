@@ -2,6 +2,10 @@ use derive_where::derive_where;
 
 use crate::stream::Stream;
 
+pub trait Report<Error> {
+    fn report(&mut self, error: Error);
+}
+
 pub trait Error<S: Stream> {
     type Cause: Cause<S>;
 

@@ -9,9 +9,10 @@ use crate::{
             AndThen, Map, MapErr, MapErrTo, MapErrWithState, MapTo, MapWithState, OrElse, ToSlice,
             WithSlice, WithSpan,
         },
+        recover::OrRecover,
         repeat::{NoCollection, RepeatUntil},
     },
-    error::{Error, ErrorWithContext},
+    error::{Error, ErrorWithContext, Report},
     prelude::{prefixed, suffixed, TokenSet},
     stream::{BorrowState, Stream},
 };
@@ -224,6 +225,20 @@ where
             token_set,
             min: 0,
             max: None,
+            _phantom: PhantomData,
+        }
+    }
+
+    #[inline]
+    fn or_recover<R>(self, recover: R) -> OrRecover<Self, R, S, O, E>
+    where
+        Self: Sized,
+        R: Parser<S, O, E>,
+        S: BorrowState<State: Report<E>>,
+    {
+        OrRecover {
+            parser: self,
+            recover,
             _phantom: PhantomData,
         }
     }
