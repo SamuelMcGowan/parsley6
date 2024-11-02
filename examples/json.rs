@@ -19,10 +19,7 @@ pub enum ParseErrorCause {
     IntError(std::num::ParseIntError),
 }
 
-impl Cause for ParseErrorCause {
-    type Token = char;
-    type Slice = str;
-
+impl<'a> Cause<CharStream<'a>> for ParseErrorCause {
     fn expected_token(token: char) -> Self {
         ParseErrorCause::ExpectedChar(token)
     }
@@ -31,7 +28,7 @@ impl Cause for ParseErrorCause {
         ParseErrorCause::ExpectedSlice(slice)
     }
 
-    fn expected_matching_fn() -> Self {
+    fn expected_in_set() -> Self {
         Self::ExpectedInSet
     }
 
@@ -66,9 +63,6 @@ fn main() {
     let mut stream = CharStream::new("true");
     let _ = dbg!(parse_value(&mut stream));
 
-    let mut stream = CharStream::new("12");
-    let _ = dbg!(parse_value(&mut stream));
-
     let mut stream = CharStream::new("foo");
     let _ = dbg!(parse_value(&mut stream));
 
@@ -94,7 +88,7 @@ fn parse_value<'a>(stream: &mut CharStream<'a>) -> Result<Value, ParseError<'a>>
 }
 
 fn parse_number<'a>(stream: &mut CharStream<'a>) -> Result<i32, ParseError<'a>> {
-    consume(Ascii::is_ascii_digit)
+    eat_while(Ascii::is_ascii_digit)
         .with_span()
         .and_then(|(s, span): (&str, _)| {
             s.parse::<i32>()

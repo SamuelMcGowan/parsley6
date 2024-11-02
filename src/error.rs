@@ -7,7 +7,7 @@ pub trait Report<Error> {
 }
 
 pub trait Error<S: Stream> {
-    type Cause: Cause<Token = S::Token, Slice = S::Slice>;
+    type Cause: Cause<S>;
 
     fn new(cause: Self::Cause, span: S::Span) -> Self;
     fn set_cause(&mut self, cause: Self::Cause);
@@ -19,14 +19,11 @@ pub trait ErrorWithContext<S: Stream>: Error<S> {
     fn with_context(self, context: Self::Context, span: S::Span) -> Self;
 }
 
-pub trait Cause {
-    type Token;
-    type Slice: ?Sized;
+pub trait Cause<S: Stream> {
+    fn expected_token(token: S::Token) -> Self;
+    fn expected_slice(slice: &'static S::Slice) -> Self;
 
-    fn expected_token(token: Self::Token) -> Self;
-    fn expected_slice(slice: &'static Self::Slice) -> Self;
-
-    fn expected_matching_fn() -> Self;
+    fn expected_in_set() -> Self;
     fn expected_end() -> Self;
 
     fn unknown() -> Self;
@@ -39,7 +36,7 @@ pub enum DefaultCause<S: Stream> {
     ExpectedToken(S::Token),
     ExpectedSlice(&'static S::Slice),
 
-    ExpectedMatchingFn,
+    ExpectedInSet,
     ExpectedEnd,
 
     Unknown,
@@ -52,23 +49,20 @@ impl<S: Stream> DefaultCause<S> {
     }
 }
 
-impl<S: Stream> Cause for DefaultCause<S> {
-    type Token = S::Token;
-    type Slice = S::Slice;
-
+impl<S: Stream> Cause<S> for DefaultCause<S> {
     #[inline]
-    fn expected_token(token: Self::Token) -> Self {
+    fn expected_token(token: S::Token) -> Self {
         Self::ExpectedToken(token)
     }
 
     #[inline]
-    fn expected_slice(slice: &'static Self::Slice) -> Self {
+    fn expected_slice(slice: &'static S::Slice) -> Self {
         Self::ExpectedSlice(slice)
     }
 
     #[inline]
-    fn expected_matching_fn() -> Self {
-        Self::ExpectedMatchingFn
+    fn expected_in_set() -> Self {
+        Self::ExpectedInSet
     }
 
     #[inline]
@@ -83,11 +77,7 @@ impl<S: Stream> Cause for DefaultCause<S> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum DefaultError<S, C = DefaultCause<S>, Context = Box<str>>
-where
-    S: Stream,
-    C: Cause<Token = S::Token, Slice = S::Slice>,
-{
+pub enum DefaultError<S: Stream, C: Cause<S> = DefaultCause<S>, Context = Box<str>> {
     Error {
         cause: C,
         span: S::Span,
@@ -103,7 +93,7 @@ where
 impl<S, C, Context> DefaultError<S, C, Context>
 where
     S: Stream,
-    C: Cause<Token = S::Token, Slice = S::Slice>,
+    C: Cause<S>,
 {
     #[inline]
     pub fn span(&self) -> &S::Span {
@@ -117,7 +107,7 @@ where
 impl<S, C, Context> Error<S> for DefaultError<S, C, Context>
 where
     S: Stream,
-    C: Cause<Token = S::Token, Slice = S::Slice>,
+    C: Cause<S>,
 {
     type Cause = C;
 
@@ -141,7 +131,7 @@ where
 impl<S, C, Context> ErrorWithContext<S> for DefaultError<S, C, Context>
 where
     S: Stream,
-    C: Cause<Token = S::Token, Slice = S::Slice>,
+    C: Cause<S>,
 {
     type Context = Context;
 
