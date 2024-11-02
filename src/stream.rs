@@ -324,9 +324,3 @@ impl<S: Stream, State> BorrowState for StreamWithState<S, State> {
         &mut self.state
     }
 }
-
-pub trait SourceSpanned {
-    type Span: Span;
-
-    fn source_span(&self) -> Self::Span;
-}
