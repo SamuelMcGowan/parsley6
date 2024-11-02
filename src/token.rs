@@ -6,7 +6,6 @@ use derive_where::derive_where;
 
 use crate::error::{Cause, Error};
 use crate::parser::Parser;
-use crate::prelude::TokenSet;
 use crate::stream::Stream;
 
 #[inline]
@@ -83,34 +82,34 @@ where
 }
 
 #[inline]
-pub fn peek_if<T, S, E>(token_set: T) -> PeekIf<T, S, E>
+pub fn peek_if<F, S, E>(f: F) -> PeekIf<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     PeekIf {
-        token_set,
+        f,
         _phantom: PhantomData,
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct PeekIf<T, S, E> {
-    token_set: T,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
+pub struct PeekIf<F, S, E> {
+    f: F,
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<T, S, E> Parser<S, S::Token, E> for PeekIf<T, S, E>
+impl<F, S, E> Parser<S, S::Token, E> for PeekIf<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
-            Some(token) if self.token_set.contains(&token) => Ok(token),
+            Some(token) if (self.f)(&token) => Ok(token),
             _ => Err(E::new(
                 E::Cause::expected_in_set(),
                 stream.peek_token_span(),
@@ -120,34 +119,34 @@ where
 }
 
 #[inline]
-pub fn eat_if<T, S, E>(token_set: T) -> EatIf<T, S, E>
+pub fn eat_if<F, S, E>(f: F) -> EatIf<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     EatIf {
-        token_set,
+        f,
         _phantom: PhantomData,
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct EatIf<T, S, E> {
-    token_set: T,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
+pub struct EatIf<F, S, E> {
+    f: F,
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<T, S, E> Parser<S, S::Token, E> for EatIf<T, S, E>
+impl<F, S, E> Parser<S, S::Token, E> for EatIf<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         match stream.peek_token() {
-            Some(token) if self.token_set.contains(&token) => {
+            Some(token) if (self.f)(&token) => {
                 stream.next_token();
                 Ok(token)
             }
@@ -260,76 +259,34 @@ where
 }
 
 #[inline]
-pub fn eat_while<T, S, E>(token_set: T) -> EatWhile<T, S, E>
+pub fn eat_while<F, S, E>(f: F) -> EatWhile<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     EatWhile {
-        token_set,
+        f,
         _phantom: PhantomData,
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct EatWhile<T, S, E> {
-    token_set: T,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
+pub struct EatWhile<F, S, E> {
+    f: F,
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<T, S, E> Parser<S, S::SliceRef, E> for EatWhile<T, S, E>
+impl<F, S, E> Parser<S, S::SliceRef, E> for EatWhile<F, S, E>
 where
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
         let start = stream.stream_position();
-        while stream
-            .peek_token()
-            .is_some_and(|t| self.token_set.contains(&t))
-        {
-            stream.next_token();
-        }
-        let end = stream.stream_position();
-        Ok(stream.slice(start, end))
-    }
-}
-
-#[inline]
-pub fn eat_until<T, S, E>(token_set: T) -> EatUntil<T, S, E>
-where
-    T: TokenSet<S::Token>,
-    S: Stream,
-    E: Error<S>,
-{
-    EatUntil {
-        token_set,
-        _phantom: PhantomData,
-    }
-}
-
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct EatUntil<T, S, E> {
-    token_set: T,
-    _phantom: PhantomData<*const (S, E)>,
-}
-
-impl<T, S, E> Parser<S, S::SliceRef, E> for EatUntil<T, S, E>
-where
-    T: TokenSet<S::Token>,
-    S: Stream,
-    E: Error<S>,
-{
-    #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
-        let start = stream.stream_position();
-        while stream
-            .peek_token()
-            .is_some_and(|t| !self.token_set.contains(&t))
-        {
+        while stream.peek_token().is_some_and(|t| (self.f)(&t)) {
             stream.next_token();
         }
         let end = stream.stream_position();

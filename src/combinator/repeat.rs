@@ -5,7 +5,6 @@ use derive_where::derive_where;
 use crate::{
     error::{Cause, Error},
     parser::Parser,
-    prelude::TokenSet,
     stream::Stream,
 };
 
@@ -90,10 +89,10 @@ impl<T> FromIterator<T> for NoCollection {
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, T)]
-pub struct RepeatWhile<P, T, Collection, S, O, E> {
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct RepeatWhile<P, F, Collection, S, O, E> {
     pub(crate) parser: P,
-    pub(crate) token_set: T,
+    pub(crate) f: F,
 
     pub(crate) min: usize,
     pub(crate) max: Option<NonZeroUsize>,
@@ -101,10 +100,10 @@ pub struct RepeatWhile<P, T, Collection, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (Collection, S, O, E)>,
 }
 
-impl<P, T, Collection, S, O, E> RepeatWhile<P, T, Collection, S, O, E>
+impl<P, F, Collection, S, O, E> RepeatWhile<P, F, Collection, S, O, E>
 where
     P: Parser<S, O, E>,
-    T: TokenSet<S::Token>,
+    F: Fn(&S::Token) -> bool,
     Collection: FromIterator<O>,
     S: Stream,
     E: Error<S>,
@@ -122,10 +121,10 @@ where
     }
 
     #[inline]
-    pub fn collect<C: FromIterator<O>>(self) -> RepeatWhile<P, T, C, S, O, E> {
+    pub fn collect<C: FromIterator<O>>(self) -> RepeatWhile<P, F, C, S, O, E> {
         RepeatWhile {
             parser: self.parser,
-            token_set: self.token_set,
+            f: self.f,
             min: self.min,
             max: self.max,
             _phantom: PhantomData,
@@ -154,7 +153,7 @@ where
             }
 
             match stream.peek_token() {
-                Some(token) if (self.token_set)(&token) => Some(self.parser.parse(stream)),
+                Some(token) if (self.f)(&token) => Some(self.parser.parse(stream)),
                 _ if n < self.min => {
                     Some(Err(E::new(E::Cause::unknown(), stream.peek_token_span())))
                 }

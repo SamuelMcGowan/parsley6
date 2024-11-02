@@ -40,7 +40,8 @@ fn _bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
     chain!(
         eat('b'),
         eat('a'),
-        eat_if(['r', 't']).with_err_cause(|| DefaultCause::custom("expected `r` or `t`"))
+        eat_if(|ch| matches!(ch, 'r' | 't'))
+            .with_err_cause(|| DefaultCause::custom("expected `r` or `t`"))
     )
     .to_slice()
     .map(|slice: &str| slice.to_ascii_uppercase())

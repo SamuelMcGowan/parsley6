@@ -13,7 +13,7 @@ use crate::{
         repeat::{NoCollection, RepeatWhile},
     },
     error::{Error, ErrorWithContext, Report},
-    prelude::{prefixed, suffixed, TokenSet},
+    prelude::{prefixed, suffixed},
     stream::{BorrowState, Stream},
 };
 
@@ -215,14 +215,14 @@ where
     ///
     /// Does not consume the token matched.
     #[inline]
-    fn repeat_while<T>(self, token_set: T) -> RepeatWhile<Self, T, NoCollection, S, O, E>
+    fn repeat_while<F>(self, f: F) -> RepeatWhile<Self, F, NoCollection, S, O, E>
     where
         Self: Sized,
-        T: TokenSet<S::Token>,
+        F: Fn(&S::Token) -> bool,
     {
         RepeatWhile {
             parser: self,
-            token_set,
+            f,
             min: 0,
             max: None,
             _phantom: PhantomData,
