@@ -26,7 +26,7 @@ pub trait Cause {
     fn expected_token(token: Self::Token) -> Self;
     fn expected_slice(slice: &'static Self::Slice) -> Self;
 
-    fn expected_in_set() -> Self;
+    fn expected_matching_fn() -> Self;
     fn expected_end() -> Self;
 
     fn unknown() -> Self;
@@ -39,7 +39,7 @@ pub enum DefaultCause<S: Stream> {
     ExpectedToken(S::Token),
     ExpectedSlice(&'static S::Slice),
 
-    ExpectedInSet,
+    ExpectedMatchingFn,
     ExpectedEnd,
 
     Unknown,
@@ -67,8 +67,8 @@ impl<S: Stream> Cause for DefaultCause<S> {
     }
 
     #[inline]
-    fn expected_in_set() -> Self {
-        Self::ExpectedInSet
+    fn expected_matching_fn() -> Self {
+        Self::ExpectedMatchingFn
     }
 
     #[inline]

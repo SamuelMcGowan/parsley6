@@ -312,7 +312,7 @@ where
 
     #[inline]
     fn error_cause(&self) -> C {
-        C::expected_in_set()
+        C::expected_matching_fn()
     }
 }
 

@@ -31,7 +31,7 @@ impl Cause for ParseErrorCause {
         ParseErrorCause::ExpectedSlice(slice)
     }
 
-    fn expected_in_set() -> Self {
+    fn expected_matching_fn() -> Self {
         Self::ExpectedInSet
     }
 
