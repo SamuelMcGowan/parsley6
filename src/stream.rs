@@ -190,7 +190,7 @@ impl<'a, T: SourceSpanned + Clone + PartialEq + 'static> Stream for SliceStream<
         self.all[..self.stream_position()]
             .last()
             .map(|t| t.source_span())
-            .unwrap_or_default()
+            .unwrap_or_else(|| self.peek_token_span())
     }
 
     #[inline]
@@ -318,7 +318,7 @@ impl<S: Stream, State> BorrowState for StreamWithState<S, State> {
 }
 
 pub trait SourceSpanned {
-    type Span: Span + Default + Clone;
+    type Span: Span + Clone;
 
     fn source_span(&self) -> Self::Span;
 }
