@@ -251,8 +251,7 @@ where
     where
         Self: Sized,
         F: FnMut() -> Context,
-        E: ErrorWithContext<S>,
-        E::Context: From<Context>,
+        E: ErrorWithContext<S, Context: From<Context>>,
     {
         WithErrContext {
             parser: self,

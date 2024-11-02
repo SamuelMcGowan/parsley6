@@ -12,8 +12,7 @@ use crate::stream::Stream;
 #[inline]
 pub fn peek<S, E>(token: S::Token) -> Peek<S, E>
 where
-    S: Stream,
-    S::Token: Clone,
+    S: Stream<Token: Clone>,
     E: Error<S>,
 {
     Peek {
@@ -30,8 +29,7 @@ pub struct Peek<S: Stream, E> {
 
 impl<S, E> Parser<S, S::Token, E> for Peek<S, E>
 where
-    S: Stream,
-    S::Token: Clone,
+    S: Stream<Token: Clone>,
     E: Error<S>,
 {
     #[inline]
@@ -49,8 +47,7 @@ where
 #[inline]
 pub fn eat<S, E>(token: S::Token) -> Eat<S, E>
 where
-    S: Stream,
-    S::Token: Clone,
+    S: Stream<Token: Clone>,
     E: Error<S>,
 {
     Eat {
@@ -67,8 +64,7 @@ pub struct Eat<S: Stream, E> {
 
 impl<S, E> Parser<S, S::Token, E> for Eat<S, E>
 where
-    S: Stream,
-    S::Token: Clone,
+    S: Stream<Token: Clone>,
     E: Error<S>,
 {
     #[inline]

@@ -43,8 +43,7 @@ where
     P: Parser<S, O, E>,
     MakeContext: FnMut() -> Context,
     S: Stream,
-    E: ErrorWithContext<S>,
-    E::Context: From<Context>,
+    E: ErrorWithContext<S, Context: From<Context>>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
         let start_span = stream.peek_token_span();
