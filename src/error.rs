@@ -6,10 +6,7 @@ pub trait Error<S: Stream> {
     type Cause: Cause;
 
     fn new(cause: Self::Cause, span: S::Span) -> Self;
-
-    fn with_cause(self, cause: Self::Cause) -> Self;
-
-    fn span(&self) -> S::Span;
+    fn set_cause(&mut self, cause: Self::Cause);
 }
 
 pub trait ErrorWithContext<S: Stream>: Error<S> {
@@ -98,6 +95,20 @@ pub enum DefaultError<S: Stream, C: Cause = DefaultCause<S>, Context = Box<str>>
     },
 }
 
+impl<S, C, Context> DefaultError<S, C, Context>
+where
+    S: Stream,
+    C: Cause,
+{
+    #[inline]
+    pub fn span(&self) -> S::Span {
+        match self {
+            Self::Error { span, cause: _ } => span.clone(),
+            Self::WithContext { span, .. } => span.clone(),
+        }
+    }
+}
+
 impl<S, C, Context> Error<S> for DefaultError<S, C, Context>
 where
     S: Stream,
@@ -110,27 +121,14 @@ where
         Self::Error { cause, span }
     }
 
-    fn with_cause(self, cause: Self::Cause) -> Self {
-        match self {
-            Self::Error { span, cause: _ } => Self::Error { cause, span },
-
-            Self::WithContext {
-                context,
-                span,
-                inner,
-            } => Self::WithContext {
-                context,
-                span,
-                inner: Box::new(Error::with_cause(*inner, cause)),
-            },
-        }
-    }
-
     #[inline]
-    fn span(&self) -> S::Span {
+    fn set_cause(&mut self, cause: Self::Cause) {
         match self {
-            Self::Error { span, cause: _ } => span.clone(),
-            Self::WithContext { span, .. } => span.clone(),
+            Self::Error {
+                cause: prev_cause, ..
+            } => *prev_cause = cause,
+
+            Self::WithContext { inner, .. } => inner.set_cause(cause),
         }
     }
 }

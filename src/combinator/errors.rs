@@ -23,9 +23,10 @@ where
     E: Error<S>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {
-        self.parser
-            .parse(stream)
-            .map_err(|err| err.with_cause((self.make_cause)()))
+        self.parser.parse(stream).map_err(|mut err| {
+            err.set_cause((self.make_cause)());
+            err
+        })
     }
 }
 
