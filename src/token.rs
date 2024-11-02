@@ -111,7 +111,7 @@ where
         match stream.peek_token() {
             Some(token) if (self.f)(&token) => Ok(token),
             _ => Err(E::new(
-                E::Cause::expected_in_set(),
+                E::Cause::expected_predicate(),
                 stream.peek_token_span(),
             )),
         }
@@ -151,7 +151,7 @@ where
                 Ok(token)
             }
             _ => Err(E::new(
-                E::Cause::expected_in_set(),
+                E::Cause::expected_predicate(),
                 stream.peek_token_span(),
             )),
         }

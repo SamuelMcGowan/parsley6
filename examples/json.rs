@@ -28,7 +28,7 @@ impl<'a> Cause<CharStream<'a>> for ParseErrorCause {
         ParseErrorCause::ExpectedSlice(slice)
     }
 
-    fn expected_in_set() -> Self {
+    fn expected_predicate() -> Self {
         Self::ExpectedInSet
     }
 
