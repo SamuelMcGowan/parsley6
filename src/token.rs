@@ -4,18 +4,17 @@ use std::marker::PhantomData;
 
 use derive_where::derive_where;
 
-use crate::error::{Cause, CauseFromSlice, CauseFromToken, Error};
+use crate::error::{Cause, Error};
 use crate::parser::Parser;
 use crate::prelude::TokenSet;
 use crate::stream::Stream;
 
 #[inline]
-pub fn peek<T, S, E>(token: T) -> Peek<T, S, E>
+pub fn peek<S, E>(token: S::Token) -> Peek<S, E>
 where
-    T: PartialEq<S::Token> + Clone,
     S: Stream,
+    S::Token: Clone,
     E: Error<S>,
-    E::Cause: CauseFromToken<T>,
 {
     Peek {
         token,
@@ -23,18 +22,17 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct Peek<T, S, E> {
-    token: T,
-    _phantom: PhantomData<*const (S, E)>,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; S::Token)]
+pub struct Peek<S: Stream, E> {
+    token: S::Token,
+    _phantom: PhantomData<*const E>,
 }
 
-impl<T, S, E> Parser<S, S::Token, E> for Peek<T, S, E>
+impl<S, E> Parser<S, S::Token, E> for Peek<S, E>
 where
-    T: PartialEq<S::Token> + Clone,
     S: Stream,
+    S::Token: Clone,
     E: Error<S>,
-    E::Cause: CauseFromToken<T>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
@@ -49,12 +47,11 @@ where
 }
 
 #[inline]
-pub fn eat<T, S, E>(token: T) -> Eat<T, S, E>
+pub fn eat<S, E>(token: S::Token) -> Eat<S, E>
 where
-    T: PartialEq<S::Token> + Clone,
     S: Stream,
+    S::Token: Clone,
     E: Error<S>,
-    E::Cause: CauseFromToken<T>,
 {
     Eat {
         token,
@@ -62,18 +59,17 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; T)]
-pub struct Eat<T, S, E> {
-    token: T,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; S::Token)]
+pub struct Eat<S: Stream, E> {
+    token: S::Token,
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<T, S, E> Parser<S, S::Token, E> for Eat<T, S, E>
+impl<S, E> Parser<S, S::Token, E> for Eat<S, E>
 where
-    T: PartialEq<S::Token> + Clone,
     S: Stream,
+    S::Token: Clone,
     E: Error<S>,
-    E::Cause: CauseFromToken<T>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
@@ -189,7 +185,6 @@ impl<S, E> Parser<S, S::SliceRef, E> for PeekSlice<S, E>
 where
     S: Stream,
     E: Error<S>,
-    E::Cause: CauseFromSlice<S::Slice>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
@@ -224,7 +219,6 @@ impl<S, E> Parser<S, S::SliceRef, E> for EatSlice<S, E>
 where
     S: Stream,
     E: Error<S>,
-    E::Cause: CauseFromSlice<S::Slice>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {

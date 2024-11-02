@@ -1,6 +1,6 @@
 use parsley6::prelude::*;
 
-use parsley6::error::{Cause, CauseFromSlice, CauseFromToken, DefaultError, Error};
+use parsley6::error::{Cause, DefaultError, Error};
 use parsley6::stream::CharStream;
 
 type ParseError<'a> = DefaultError<CharStream<'a>, ParseErrorCause>;
@@ -19,7 +19,15 @@ pub enum ParseErrorCause {
     IntError(std::num::ParseIntError),
 }
 
-impl Cause for ParseErrorCause {
+impl<'a> Cause<CharStream<'a>> for ParseErrorCause {
+    fn expected_token(token: char) -> Self {
+        ParseErrorCause::ExpectedChar(token)
+    }
+
+    fn expected_slice(slice: &'static str) -> Self {
+        ParseErrorCause::ExpectedSlice(slice)
+    }
+
     fn expected_in_set() -> Self {
         Self::ExpectedInSet
     }
@@ -30,18 +38,6 @@ impl Cause for ParseErrorCause {
 
     fn unknown() -> Self {
         Self::Unknown
-    }
-}
-
-impl CauseFromToken<char> for ParseErrorCause {
-    fn expected_token(token: char) -> Self {
-        ParseErrorCause::ExpectedChar(token)
-    }
-}
-
-impl CauseFromSlice<str> for ParseErrorCause {
-    fn expected_slice(slice: &'static str) -> Self {
-        ParseErrorCause::ExpectedSlice(slice)
     }
 }
 
