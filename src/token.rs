@@ -7,7 +7,7 @@ use derive_where::derive_where;
 use crate::error::{Cause, CauseFromSlice, CauseFromToken, Error};
 use crate::parser::Parser;
 use crate::prelude::TokenSet;
-use crate::stream::{Stream, StreamEatSlice};
+use crate::stream::Stream;
 
 #[inline]
 pub fn peek<T, S, E>(token: T) -> Peek<T, S, E>
@@ -168,10 +168,9 @@ where
 }
 
 #[inline]
-pub fn peek_slice<Slice, S, E>(slice: &'static Slice) -> PeekSlice<Slice, S, E>
+pub fn peek_slice<S, E>(slice: &'static S::Slice) -> PeekSlice<S, E>
 where
-    Slice: ?Sized,
-    S: StreamEatSlice<Slice>,
+    S: Stream,
     E: Error<S>,
 {
     PeekSlice {
@@ -180,18 +179,17 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; &'static Slice)]
-pub struct PeekSlice<Slice: ?Sized + 'static, S, E> {
-    slice: &'static Slice,
-    _phantom: PhantomData<*const (S, E)>,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; &'static S::Slice)]
+pub struct PeekSlice<S: Stream, E> {
+    slice: &'static S::Slice,
+    _phantom: PhantomData<*const E>,
 }
 
-impl<Slice, S, E> Parser<S, S::SliceRef, E> for PeekSlice<Slice, S, E>
+impl<S, E> Parser<S, S::SliceRef, E> for PeekSlice<S, E>
 where
-    Slice: ?Sized,
-    S: StreamEatSlice<Slice>,
+    S: Stream,
     E: Error<S>,
-    E::Cause: CauseFromSlice<Slice>,
+    E::Cause: CauseFromSlice<S::Slice>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
@@ -205,10 +203,9 @@ where
 }
 
 #[inline]
-pub fn eat_slice<Slice, S, E>(slice: &'static Slice) -> EatSlice<Slice, S, E>
+pub fn eat_slice<S, E>(slice: &'static S::Slice) -> EatSlice<S, E>
 where
-    Slice: ?Sized,
-    S: StreamEatSlice<Slice>,
+    S: Stream,
     E: Error<S>,
 {
     EatSlice {
@@ -217,18 +214,17 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; &'static Slice)]
-pub struct EatSlice<Slice: ?Sized + 'static, S, E> {
-    slice: &'static Slice,
-    _phantom: PhantomData<*const (S, E)>,
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; &'static S::Slice)]
+pub struct EatSlice<S: Stream, E> {
+    slice: &'static S::Slice,
+    _phantom: PhantomData<*const E>,
 }
 
-impl<Slice, S, E> Parser<S, S::SliceRef, E> for EatSlice<Slice, S, E>
+impl<S, E> Parser<S, S::SliceRef, E> for EatSlice<S, E>
 where
-    Slice: ?Sized,
-    S: StreamEatSlice<Slice>,
+    S: Stream,
     E: Error<S>,
-    E::Cause: CauseFromSlice<Slice>,
+    E::Cause: CauseFromSlice<S::Slice>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
