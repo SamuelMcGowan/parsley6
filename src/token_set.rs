@@ -2,14 +2,6 @@ use std::ops::{Range, RangeFull, RangeInclusive};
 
 pub trait TokenSet<Token> {
     fn contains(&self, token: &Token) -> bool;
-
-    #[inline]
-    fn not(self) -> Not<Self>
-    where
-        Self: Sized,
-    {
-        Not(self)
-    }
 }
 
 impl<F: Fn(&Token) -> bool, Token> TokenSet<Token> for F {
@@ -77,13 +69,3 @@ impl_token_set! { A, B, C, D, E }
 impl_token_set! { A, B, C, D, E, F }
 impl_token_set! { A, B, C, D, E, F, G }
 impl_token_set! { A, B, C, D, E, F, G, H }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Not<T>(T);
-
-impl<T: TokenSet<Token>, Token> TokenSet<Token> for Not<T> {
-    #[inline]
-    fn contains(&self, token: &Token) -> bool {
-        !self.0.contains(token)
-    }
-}

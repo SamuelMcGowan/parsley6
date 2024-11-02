@@ -40,7 +40,7 @@ fn _bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
     chain!(
         eat('b'),
         eat('a'),
-        eat_in(['r', 't']).with_err_cause(|| DefaultCause::custom("expected `r` or `t`"))
+        eat_if(['r', 't']).with_err_cause(|| DefaultCause::custom("expected `r` or `t`"))
     )
     .to_slice()
     .map(|slice: &str| slice.to_ascii_uppercase())
@@ -61,9 +61,9 @@ fn _bar_bat<'a>(stream: &mut CharStream<'a>) -> Result<String, Error<'a>> {
 
 fn _ident<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
     chain!(
-        eat_in(|ch: &char| ch.is_ascii_alphabetic() || *ch == '_')
+        eat_if(|ch: &char| ch.is_ascii_alphabetic() || *ch == '_')
             .with_err_cause(|| DefaultCause::custom("expected an alphabetic character or `_`")),
-        eat_while_in(|ch: &char| ch.is_ascii_alphanumeric() || *ch == '_')
+        eat_while(|ch: &char| ch.is_ascii_alphanumeric() || *ch == '_')
     )
     .to_slice()
     .parse(stream)
