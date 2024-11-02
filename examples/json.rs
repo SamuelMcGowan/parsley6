@@ -19,7 +19,10 @@ pub enum ParseErrorCause {
     IntError(std::num::ParseIntError),
 }
 
-impl<'a> Cause<CharStream<'a>> for ParseErrorCause {
+impl Cause for ParseErrorCause {
+    type Token = char;
+    type Slice = str;
+
     fn expected_token(token: char) -> Self {
         ParseErrorCause::ExpectedChar(token)
     }

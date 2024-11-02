@@ -11,7 +11,7 @@ use crate::stream::Stream;
 #[inline]
 pub fn peek<Pat, S, E>(pattern: Pat) -> Peek<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -29,7 +29,7 @@ pub struct Peek<Pat, S, E> {
 
 impl<Pat, S, E> Parser<S, S::Token, E> for Peek<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -45,7 +45,7 @@ where
 #[inline]
 pub fn eat<Pat, S, E>(pattern: Pat) -> Eat<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -63,7 +63,7 @@ pub struct Eat<Pat, S, E> {
 
 impl<Pat, S, E> Parser<S, S::Token, E> for Eat<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     S: Stream,
     E: Error<S>,
@@ -183,7 +183,7 @@ where
 #[inline]
 pub fn seek_until<Pat, S, E>(pattern: Pat) -> SeekUntil<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -201,7 +201,7 @@ pub struct SeekUntil<Pat, S, E> {
 
 impl<Pat, S, E> Parser<S, S::Token, E> for SeekUntil<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -222,7 +222,7 @@ where
 #[inline]
 pub fn seek_past<Pat, S, E>(pattern: Pat) -> SeekPast<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -240,7 +240,7 @@ pub struct SeekPast<Pat, S, E> {
 
 impl<Pat, S, E> Parser<S, S::Token, E> for SeekPast<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -259,7 +259,7 @@ where
 #[inline]
 pub fn consume<Pat, S, E>(pattern: Pat) -> Consume<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -277,7 +277,7 @@ pub struct Consume<Pat, S, E> {
 
 impl<Pat, S, E> Parser<S, S::SliceRef, E> for Consume<Pat, S, E>
 where
-    Pat: Pattern<S::Token>,
+    Pat: Pattern<S::Token, E::Cause>,
     S: Stream,
     E: Error<S>,
 {
@@ -295,75 +295,53 @@ where
     }
 }
 
-pub trait Pattern<Token> {
+pub trait Pattern<Token, C: Cause> {
     fn is_match(&self, token: &Token) -> bool;
-
-    fn error_cause<C, S>(&self) -> C
-    where
-        C: Cause<S>,
-        S: Stream<Token = Token>;
+    fn error_cause(&self) -> C;
 }
 
-impl<T, F: Fn(&T) -> bool> Pattern<T> for F {
+impl<T, F, C> Pattern<T, C> for F
+where
+    F: Fn(&T) -> bool,
+    C: Cause,
+{
     #[inline]
     fn is_match(&self, token: &T) -> bool {
         (*self)(token)
     }
 
     #[inline]
-    fn error_cause<C, S>(&self) -> C
-    where
-        C: Cause<S>,
-        S: Stream<Token = T>,
-    {
+    fn error_cause(&self) -> C {
         C::expected_in_set()
     }
 }
 
-impl Pattern<char> for char {
+impl<C> Pattern<char, C> for char
+where
+    C: Cause<Token = char>,
+{
     #[inline]
     fn is_match(&self, token: &char) -> bool {
         *token == *self
     }
 
     #[inline]
-    fn error_cause<C, S>(&self) -> C
-    where
-        C: Cause<S>,
-        S: Stream<Token = char>,
-    {
+    fn error_cause(&self) -> C {
         C::expected_token(*self)
     }
 }
 
-impl Pattern<char> for u8 {
-    #[inline]
-    fn is_match(&self, token: &char) -> bool {
-        *token == *self as char
-    }
-
-    #[inline]
-    fn error_cause<C, S>(&self) -> C
-    where
-        C: Cause<S>,
-        S: Stream<Token = char>,
-    {
-        C::expected_token(*self as char)
-    }
-}
-
-impl Pattern<u8> for u8 {
+impl<C> Pattern<u8, C> for u8
+where
+    C: Cause<Token = u8>,
+{
     #[inline]
     fn is_match(&self, token: &u8) -> bool {
         *token == *self
     }
 
     #[inline]
-    fn error_cause<C, S>(&self) -> C
-    where
-        C: Cause<S>,
-        S: Stream<Token = u8>,
-    {
+    fn error_cause(&self) -> C {
         C::expected_token(*self)
     }
 }
