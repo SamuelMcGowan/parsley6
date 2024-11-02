@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use derive_where::derive_where;
 
 use crate::{
-    error::Error,
+    error::{Error, ErrorWithContext},
     parser::Parser,
     stream::{Span, Stream},
 };
@@ -42,7 +42,7 @@ where
     P: Parser<S, O, E>,
     MakeContext: FnMut() -> Context,
     S: Stream,
-    E: Error<S>,
+    E: ErrorWithContext<S>,
     E::Context: From<Context>,
 {
     fn parse(&mut self, stream: &mut S) -> Result<O, E> {

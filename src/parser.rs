@@ -11,7 +11,7 @@ use crate::{
         },
         repeat::{NoCollection, RepeatUntil},
     },
-    error::Error,
+    error::{Error, ErrorWithContext},
     prelude::{prefixed, suffixed, TokenSet},
     stream::{BorrowState, Stream},
 };
@@ -251,6 +251,7 @@ where
     where
         Self: Sized,
         F: FnMut() -> Context,
+        E: ErrorWithContext<S>,
         E::Context: From<Context>,
     {
         WithErrContext {

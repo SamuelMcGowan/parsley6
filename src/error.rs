@@ -4,14 +4,18 @@ use crate::stream::Stream;
 
 pub trait Error<S: Stream> {
     type Cause: Cause;
-    type Context;
 
     fn new(cause: Self::Cause, span: S::Span) -> Self;
 
     fn with_cause(self, cause: Self::Cause) -> Self;
-    fn with_context(self, context: Self::Context, span: S::Span) -> Self;
 
     fn span(&self) -> S::Span;
+}
+
+pub trait ErrorWithContext<S: Stream>: Error<S> {
+    type Context;
+
+    fn with_context(self, context: Self::Context, span: S::Span) -> Self;
 }
 
 pub trait Cause {
@@ -100,7 +104,6 @@ where
     C: Cause,
 {
     type Cause = C;
-    type Context = Context;
 
     #[inline]
     fn new(cause: Self::Cause, span: S::Span) -> Self {
@@ -124,19 +127,27 @@ where
     }
 
     #[inline]
+    fn span(&self) -> S::Span {
+        match self {
+            Self::Error { span, cause: _ } => span.clone(),
+            Self::WithContext { span, .. } => span.clone(),
+        }
+    }
+}
+
+impl<S, C, Context> ErrorWithContext<S> for DefaultError<S, C, Context>
+where
+    S: Stream,
+    C: Cause,
+{
+    type Context = Context;
+
+    #[inline]
     fn with_context(self, context: Self::Context, span: S::Span) -> Self {
         Self::WithContext {
             context,
             span,
             inner: Box::new(self),
-        }
-    }
-
-    #[inline]
-    fn span(&self) -> S::Span {
-        match self {
-            Self::Error { span, cause: _ } => span.clone(),
-            Self::WithContext { span, .. } => span.clone(),
         }
     }
 }
