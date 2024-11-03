@@ -55,11 +55,11 @@ macro_rules! chain {
 
 #[inline]
 #[doc(hidden)]
-pub fn chain_inner<S, O, E, Parsers>(parsers: Parsers) -> Chained<S, O, E, Parsers>
+pub fn chain_inner<S, E, Parsers>(parsers: Parsers) -> Chained<S, E, Parsers>
 where
     S: Stream,
     E: Error<S>,
-    Parsers: ChainedParsers<S, E, Output = O>,
+    Parsers: ChainedParsers<S, E>,
 {
     Chained {
         parsers,
@@ -68,18 +68,18 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; Parsers)]
-pub struct Chained<S, O, E, Parsers> {
+pub struct Chained<S, E, Parsers> {
     parsers: Parsers,
-    _phantom: PhantomData<*const (S, O, E)>,
+    _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<S, O, E, Parsers> Parser<S, E> for Chained<S, O, E, Parsers>
+impl<S, E, Parsers> Parser<S, E> for Chained<S, E, Parsers>
 where
     S: Stream,
     E: Error<S>,
-    Parsers: ChainedParsers<S, E, Output = O>,
+    Parsers: ChainedParsers<S, E>,
 {
-    type Output = O;
+    type Output = Parsers::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parsers.parse_chained(stream)
@@ -87,15 +87,12 @@ where
 }
 
 #[inline]
-pub fn prefixed<A, B, S, AOutput, BOutput, E>(
-    prefix: A,
-    parser: B,
-) -> Prefixed<A, B, AOutput, BOutput, S, E>
+pub fn prefixed<A, B, S, E>(prefix: A, parser: B) -> Prefixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
     Prefixed {
         prefix,
@@ -105,26 +102,26 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B)]
-pub struct Prefixed<A, B, AOutput, BOutput, S, E>
+pub struct Prefixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
     prefix: A,
     parser: B,
-    _phantom: PhantomData<*const (S, AOutput, BOutput, E)>,
+    _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<A, B, AOutput, BOutput, S, E> Parser<S, E> for Prefixed<A, B, AOutput, BOutput, S, E>
+impl<A, B, S, E> Parser<S, E> for Prefixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
-    type Output = BOutput;
+    type Output = B::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let _ = self.prefix.parse(stream)?;
@@ -133,15 +130,12 @@ where
 }
 
 #[inline]
-pub fn suffixed<A, B, S, AOutput, BOutput, E>(
-    parser: A,
-    suffix: B,
-) -> Suffixed<A, B, AOutput, BOutput, S, E>
+pub fn suffixed<A, B, S, E>(parser: A, suffix: B) -> Suffixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
     Suffixed {
         parser,
@@ -151,26 +145,26 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B)]
-pub struct Suffixed<A, B, AOutput, BOutput, S, E>
+pub struct Suffixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
     parser: A,
     suffix: B,
-    _phantom: PhantomData<*const (S, AOutput, BOutput, E)>,
+    _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<A, B, AOutput, BOutput, S, E> Parser<S, E> for Suffixed<A, B, AOutput, BOutput, S, E>
+impl<A, B, S, E> Parser<S, E> for Suffixed<A, B, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
 {
-    type Output = AOutput;
+    type Output = A::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let output = self.parser.parse(stream)?;
@@ -180,17 +174,13 @@ where
 }
 
 #[inline]
-pub fn between<A, B, C, S, AOutput, BOutput, COutput, E>(
-    prefix: A,
-    parser: B,
-    suffix: C,
-) -> Between<A, B, C, AOutput, BOutput, COutput, S, E>
+pub fn between<A, B, C, S, E>(prefix: A, parser: B, suffix: C) -> Between<A, B, C, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
-    C: Parser<S, E, Output = COutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
+    C: Parser<S, E>,
 {
     Between {
         prefix,
@@ -201,30 +191,29 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; A, B, C)]
-pub struct Between<A, B, C, AOutput, BOutput, COutput, S, E>
+pub struct Between<A, B, C, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
-    C: Parser<S, E, Output = COutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
+    C: Parser<S, E>,
 {
     prefix: A,
     parser: B,
     suffix: C,
-    _phantom: PhantomData<*const (S, AOutput, BOutput, COutput, E)>,
+    _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<A, B, C, AOutput, BOutput, COutput, S, E> Parser<S, E>
-    for Between<A, B, C, AOutput, BOutput, COutput, S, E>
+impl<A, B, C, S, E> Parser<S, E> for Between<A, B, C, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, E, Output = AOutput>,
-    B: Parser<S, E, Output = BOutput>,
-    C: Parser<S, E, Output = COutput>,
+    A: Parser<S, E>,
+    B: Parser<S, E>,
+    C: Parser<S, E>,
 {
-    type Output = BOutput;
+    type Output = B::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let _ = self.prefix.parse(stream)?;

@@ -90,21 +90,21 @@ impl<T> FromIterator<T> for NoCollection {
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct RepeatWhile<P, F, Collection, S, O, E> {
+pub struct RepeatWhile<P, F, Collection, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
 
     pub(crate) min: usize,
     pub(crate) max: Option<NonZeroUsize>,
 
-    pub(crate) _phantom: PhantomData<*const (Collection, S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (Collection, S, E)>,
 }
 
-impl<P, F, Collection, S, O, E> RepeatWhile<P, F, Collection, S, O, E>
+impl<P, F, Collection, S, E> RepeatWhile<P, F, Collection, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     F: Fn(&S::Token) -> bool,
-    Collection: FromIterator<O>,
+    Collection: FromIterator<P::Output>,
     S: Stream,
     E: Error<S>,
 {
@@ -121,7 +121,7 @@ where
     }
 
     #[inline]
-    pub fn collect<C: FromIterator<O>>(self) -> RepeatWhile<P, F, C, S, O, E> {
+    pub fn collect<C: FromIterator<P::Output>>(self) -> RepeatWhile<P, F, C, S, E> {
         RepeatWhile {
             parser: self.parser,
             f: self.f,
@@ -132,11 +132,11 @@ where
     }
 }
 
-impl<P, F, Collection, S, O, E> Parser<S, E> for RepeatWhile<P, F, Collection, S, O, E>
+impl<P, F, Collection, S, E> Parser<S, E> for RepeatWhile<P, F, Collection, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     F: FnMut(&S::Token) -> bool,
-    Collection: FromIterator<O>,
+    Collection: FromIterator<P::Output>,
     S: Stream,
     E: Error<S>,
 {

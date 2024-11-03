@@ -7,20 +7,20 @@ use crate::parser::Parser;
 use crate::stream::{BorrowState, Stream};
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, R)]
-pub struct OrRecover<P, R, S, O, E> {
+pub struct OrRecover<P, R, S, E> {
     pub(crate) parser: P,
     pub(crate) recover: R,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, R, S, O, E> Parser<S, E> for OrRecover<P, R, S, O, E>
+impl<P, R, S, E> Parser<S, E> for OrRecover<P, R, S, E>
 where
-    P: Parser<S, E, Output = O>,
-    R: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
+    R: Parser<S, E, Output = P::Output>,
     S: Stream + BorrowState<State: Report<E>>,
     E: Error<S>,
 {
-    type Output = O;
+    type Output = P::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match self.parser.parse(stream) {

@@ -9,20 +9,20 @@ use crate::{
 };
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct Map<P, OA, OB, F, S, E> {
+pub struct Map<P, O, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, OA, OB, F, S, E> Parser<S, E> for Map<P, OA, OB, F, S, E>
+impl<P, O, F, S, E> Parser<S, E> for Map<P, O, F, S, E>
 where
-    P: Parser<S, E, Output = OA>,
-    F: FnMut(OA) -> OB,
+    P: Parser<S, E>,
+    F: FnMut(P::Output) -> O,
     S: Stream,
     E: Error<S>,
 {
-    type Output = OB;
+    type Output = O;
 
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
@@ -31,20 +31,20 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapWithState<P, OA, OB, F, S, E> {
+pub struct MapWithState<P, O, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, OA, OB, F, S, E> Parser<S, E> for MapWithState<P, OA, OB, F, S, E>
+impl<P, O, F, S, E> Parser<S, E> for MapWithState<P, O, F, S, E>
 where
-    P: Parser<S, E, Output = OA>,
-    F: FnMut(OA, &mut S::State) -> OB,
+    P: Parser<S, E>,
+    F: FnMut(P::Output, &mut S::State) -> O,
     S: Stream + BorrowState,
     E: Error<S>,
 {
-    type Output = OB;
+    type Output = O;
 
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
@@ -54,21 +54,21 @@ where
     }
 }
 
-#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, OB)]
-pub struct MapTo<P, OA, OB, S, E> {
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, O)]
+pub struct MapTo<P, O, S, E> {
     pub(crate) parser: P,
-    pub(crate) value: OB,
-    pub(crate) _phantom: PhantomData<*const (S, OA, E)>,
+    pub(crate) value: O,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, OA, OB, S, E> Parser<S, E> for MapTo<P, OA, OB, S, E>
+impl<P, O, S, E> Parser<S, E> for MapTo<P, O, S, E>
 where
-    P: Parser<S, E, Output = OA>,
-    OB: Clone,
+    P: Parser<S, E>,
+    O: Clone,
     S: Stream,
     E: Error<S>,
 {
-    type Output = OB;
+    type Output = O;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).map(|_| self.value.clone())
@@ -76,20 +76,20 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapErr<P, F, S, O, E> {
+pub struct MapErr<P, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, F, S, O, E> Parser<S, E> for MapErr<P, F, S, O, E>
+impl<P, F, S, E> Parser<S, E> for MapErr<P, F, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     F: FnMut(E) -> E,
     S: Stream,
     E: Error<S>,
 {
-    type Output = O;
+    type Output = P::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).map_err(&mut self.f)
@@ -97,21 +97,21 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct MapErrWithState<P, F, S, O, E> {
+pub struct MapErrWithState<P, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, F, S, O, E> Parser<S, E> for MapErrWithState<P, F, S, O, E>
+impl<P, F, S, E> Parser<S, E> for MapErrWithState<P, F, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     S: BorrowState,
     F: FnMut(E, &mut S::State) -> E,
     S: Stream,
     E: Error<S>,
 {
-    type Output = O;
+    type Output = P::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser
@@ -121,19 +121,19 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, E)]
-pub struct MapErrTo<P, S, O, E> {
+pub struct MapErrTo<P, S, E> {
     pub(crate) parser: P,
     pub(crate) error: E,
-    pub(crate) _phantom: PhantomData<*const (S, O)>,
+    pub(crate) _phantom: PhantomData<*const S>,
 }
 
-impl<P, S, O, E> Parser<S, E> for MapErrTo<P, S, O, E>
+impl<P, S, E> Parser<S, E> for MapErrTo<P, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     S: Stream,
     E: Error<S> + Clone,
 {
-    type Output = O;
+    type Output = P::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).map_err(|_| self.error.clone())
@@ -141,20 +141,20 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct AndThen<P, F, OA, OB, S, E> {
+pub struct AndThen<P, F, O, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, OA, OB, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, F, OA, OB, S, E> Parser<S, E> for AndThen<P, F, OA, OB, S, E>
+impl<P, F, O, S, E> Parser<S, E> for AndThen<P, F, O, S, E>
 where
-    P: Parser<S, E, Output = OA>,
-    F: FnMut(OA) -> Result<OB, E>,
+    P: Parser<S, E>,
+    F: FnMut(P::Output) -> Result<O, E>,
     S: Stream,
     E: Error<S>,
 {
-    type Output = OB;
+    type Output = O;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).and_then(&mut self.f)
@@ -162,20 +162,20 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
-pub struct OrElse<P, F, S, O, E> {
+pub struct OrElse<P, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, F, S, O, E> Parser<S, E> for OrElse<P, F, S, O, E>
+impl<P, F, S, E> Parser<S, E> for OrElse<P, F, S, E>
 where
-    P: Parser<S, E, Output = O>,
-    F: FnMut(E) -> Result<O, E>,
+    P: Parser<S, E>,
+    F: FnMut(E) -> Result<P::Output, E>,
     S: Stream,
     E: Error<S>,
 {
-    type Output = O;
+    type Output = P::Output;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).or_else(&mut self.f)
@@ -183,14 +183,14 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
-pub struct ToSlice<P, S, O, E> {
+pub struct ToSlice<P, S, E> {
     pub(crate) parser: P,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, S, O, E> Parser<S, E> for ToSlice<P, S, O, E>
+impl<P, S, E> Parser<S, E> for ToSlice<P, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     S: Stream,
     E: Error<S>,
 {
@@ -206,18 +206,18 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
-pub struct WithSlice<P, S, O, E> {
+pub struct WithSlice<P, S, E> {
     pub(crate) parser: P,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, S, O, E> Parser<S, E> for WithSlice<P, S, O, E>
+impl<P, S, E> Parser<S, E> for WithSlice<P, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     S: Stream,
     E: Error<S>,
 {
-    type Output = (O, S::SliceRef);
+    type Output = (P::Output, S::SliceRef);
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let start = stream.stream_position();
@@ -228,18 +228,18 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
-pub struct WithSpan<P, S, O, E> {
+pub struct WithSpan<P, S, E> {
     pub(crate) parser: P,
-    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<P, S, O, E> Parser<S, E> for WithSpan<P, S, O, E>
+impl<P, S, E> Parser<S, E> for WithSpan<P, S, E>
 where
-    P: Parser<S, E, Output = O>,
+    P: Parser<S, E>,
     S: Stream,
     E: Error<S>,
 {
-    type Output = (O, S::Span);
+    type Output = (P::Output, S::Span);
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let start_span = stream.peek_token_span();
