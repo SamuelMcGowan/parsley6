@@ -45,7 +45,7 @@ impl_chained_parsers! { A AO 0, B BO 1, C CO 2, D DO 3, E EO 4, F FO 5, G GO 6, 
 #[macro_export]
 macro_rules! chain {
     ($($e:expr),+ $(,)?) => {
-        $crate::combinator::chain::chain_inner(($($e),*))
+        $crate::combinator::chain_inner(($($e),*))
     };
 }
 
