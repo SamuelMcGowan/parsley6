@@ -26,6 +26,7 @@ fn main() {
 
     println!("{:?}", test(list, "[bcbcbc]"));
     println!("{:?}", test(list, "[bcbcb]"));
+    // println!("{:?}", test(12, "[bcbcb]"));
 
     println!("{:?}", test(seek_semicolon, "hello;world"));
     println!("{:?}", test(seek_semicolon, "no semicolon"));

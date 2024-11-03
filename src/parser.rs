@@ -17,6 +17,10 @@ use crate::{
     stream::{BorrowState, Stream},
 };
 
+#[diagnostic::on_unimplemented(
+    message = "Not a parser of `{O}`, (with stream `{S}` and error `{E}`).",
+    label = "Doesn't implement `Parser<{S}, {O}, {E}>`."
+)]
 pub trait Parser<S, O, E>
 where
     S: Stream,
