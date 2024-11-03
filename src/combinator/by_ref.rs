@@ -7,7 +7,7 @@ use crate::parser::Parser;
 use crate::stream::Stream;
 
 #[derive_where(Debug, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
-pub struct ByRef<'a, P: ?Sized, S, E> {
+pub struct ByRef<'a, P, S, E> {
     pub(crate) parser: &'a mut P,
     pub(crate) _phantom: PhantomData<*const (S, E)>,
 }

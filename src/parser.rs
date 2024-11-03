@@ -279,7 +279,10 @@ where
 
     /// Create a new parser from this one without consuming it.
     #[inline]
-    fn by_ref(&mut self) -> ByRef<Self, S, E> {
+    fn by_ref(&mut self) -> ByRef<Self, S, E>
+    where
+        Self: Sized,
+    {
         ByRef {
             parser: self,
             _phantom: PhantomData,
