@@ -102,7 +102,7 @@ pub struct RepeatWhile<P, F, Collection, S, O, E> {
 
 impl<P, F, Collection, S, O, E> RepeatWhile<P, F, Collection, S, O, E>
 where
-    P: Parser<S, O, E>,
+    P: Parser<S, E, Output = O>,
     F: Fn(&S::Token) -> bool,
     Collection: FromIterator<O>,
     S: Stream,
@@ -132,15 +132,17 @@ where
     }
 }
 
-impl<P, F, Collection, S, O, E> Parser<S, Collection, E> for RepeatWhile<P, F, Collection, S, O, E>
+impl<P, F, Collection, S, O, E> Parser<S, E> for RepeatWhile<P, F, Collection, S, O, E>
 where
-    P: Parser<S, O, E>,
+    P: Parser<S, E, Output = O>,
     F: FnMut(&S::Token) -> bool,
     Collection: FromIterator<O>,
     S: Stream,
     E: Error<S>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<Collection, E> {
+    type Output = Collection;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         debug_assert!(self.max.is_none_or(|m| m.get() >= self.min));
 
         let mut n = 0;

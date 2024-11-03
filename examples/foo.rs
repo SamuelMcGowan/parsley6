@@ -32,10 +32,10 @@ fn main() {
     println!("{:?}", test(seek_semicolon, "no semicolon"));
 }
 
-fn test<'a, P: Parser<CharStream<'a>, T, Error<'a>>, T>(
+fn test<'a, P: Parser<CharStream<'a>, Error<'a>>>(
     mut parser: P,
     input: &'a str,
-) -> Result<T, Error<'a>> {
+) -> Result<P::Output, Error<'a>> {
     let mut stream = CharStream::new(input);
     parser.parse(&mut stream)
 }

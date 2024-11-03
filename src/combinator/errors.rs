@@ -15,14 +15,16 @@ pub struct WithErrCause<P, MakeCause, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, MakeCause, S, O, E> Parser<S, O, E> for WithErrCause<P, MakeCause, S, O, E>
+impl<P, MakeCause, S, O, E> Parser<S, E> for WithErrCause<P, MakeCause, S, O, E>
 where
-    P: Parser<S, O, E>,
+    P: Parser<S, E, Output = O>,
     MakeCause: FnMut() -> E::Cause,
     S: Stream,
     E: Error<S>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).map_err(|mut err| {
             err.set_cause((self.make_cause)());
             err
@@ -37,15 +39,17 @@ pub struct WithErrContext<P, MakeContext, Context, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (Context, S, O, E)>,
 }
 
-impl<P, MakeContext, Context, S, O, E> Parser<S, O, E>
+impl<P, MakeContext, Context, S, O, E> Parser<S, E>
     for WithErrContext<P, MakeContext, Context, S, O, E>
 where
-    P: Parser<S, O, E>,
+    P: Parser<S, E, Output = O>,
     MakeContext: FnMut() -> Context,
     S: Stream,
     E: ErrorWithContext<S, Context: From<Context>>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let start_span = stream.peek_token_span();
 
         self.parser.parse(stream).map_err(|err| {

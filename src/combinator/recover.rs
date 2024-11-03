@@ -13,14 +13,16 @@ pub struct OrRecover<P, R, S, O, E> {
     pub(crate) _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<P, R, S, O, E> Parser<S, O, E> for OrRecover<P, R, S, O, E>
+impl<P, R, S, O, E> Parser<S, E> for OrRecover<P, R, S, O, E>
 where
-    P: Parser<S, O, E>,
-    R: Parser<S, O, E>,
+    P: Parser<S, E, Output = O>,
+    R: Parser<S, E, Output = O>,
     S: Stream + BorrowState<State: Report<E>>,
     E: Error<S>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match self.parser.parse(stream) {
             Ok(value) => Ok(value),
             Err(err) => {

@@ -6,26 +6,30 @@ use crate::error::Error;
 use crate::parser::Parser;
 use crate::stream::Stream;
 
-pub trait ChainedParsers<S, O, E>
+pub trait ChainedParsers<S, E>
 where
     S: Stream,
     E: Error<S>,
 {
-    fn parse_chained(&mut self, stream: &mut S) -> Result<O, E>;
+    type Output;
+
+    fn parse_chained(&mut self, stream: &mut S) -> Result<Self::Output, E>;
 }
 
 macro_rules! impl_chained_parsers {
     ($($parser:ident $output:ident $n:tt),+) => {
         impl<S, Err, $($parser, $output,)*>
-        ChainedParsers<S, ($($output,)*), Err> for ($($parser,)*)
+        ChainedParsers<S, Err> for ($($parser,)*)
         where
             S: Stream,
             Err: Error<S>,
-            $($parser: Parser<S, $output, Err>,)*
+            $($parser: Parser<S, Err, Output = $output>,)*
         {
+            type Output = ($($output,)*);
+
             #[allow(non_snake_case)]
             #[inline]
-            fn parse_chained(&mut self, stream: &mut S) -> Result<($($output,)*), Err> {
+            fn parse_chained(&mut self, stream: &mut S) -> Result<Self::Output, Err> {
                 $(let $parser = self.$n.parse(stream)?;)*
                 Ok(($($parser,)*))
             }
@@ -55,7 +59,7 @@ pub fn chain_inner<S, O, E, Parsers>(parsers: Parsers) -> Chained<S, O, E, Parse
 where
     S: Stream,
     E: Error<S>,
-    Parsers: ChainedParsers<S, O, E>,
+    Parsers: ChainedParsers<S, E, Output = O>,
 {
     Chained {
         parsers,
@@ -69,13 +73,15 @@ pub struct Chained<S, O, E, Parsers> {
     _phantom: PhantomData<*const (S, O, E)>,
 }
 
-impl<S, O, E, Parsers> Parser<S, O, E> for Chained<S, O, E, Parsers>
+impl<S, O, E, Parsers> Parser<S, E> for Chained<S, O, E, Parsers>
 where
     S: Stream,
     E: Error<S>,
-    Parsers: ChainedParsers<S, O, E>,
+    Parsers: ChainedParsers<S, E, Output = O>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<O, E> {
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parsers.parse_chained(stream)
     }
 }
@@ -88,8 +94,8 @@ pub fn prefixed<A, B, S, AOutput, BOutput, E>(
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
     Prefixed {
         prefix,
@@ -103,22 +109,24 @@ pub struct Prefixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
     prefix: A,
     parser: B,
     _phantom: PhantomData<*const (S, AOutput, BOutput, E)>,
 }
 
-impl<A, B, AOutput, BOutput, S, E> Parser<S, BOutput, E> for Prefixed<A, B, AOutput, BOutput, S, E>
+impl<A, B, AOutput, BOutput, S, E> Parser<S, E> for Prefixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<BOutput, E> {
+    type Output = BOutput;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let _ = self.prefix.parse(stream)?;
         self.parser.parse(stream)
     }
@@ -132,8 +140,8 @@ pub fn suffixed<A, B, S, AOutput, BOutput, E>(
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
     Suffixed {
         parser,
@@ -147,22 +155,24 @@ pub struct Suffixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
     parser: A,
     suffix: B,
     _phantom: PhantomData<*const (S, AOutput, BOutput, E)>,
 }
 
-impl<A, B, AOutput, BOutput, S, E> Parser<S, AOutput, E> for Suffixed<A, B, AOutput, BOutput, S, E>
+impl<A, B, AOutput, BOutput, S, E> Parser<S, E> for Suffixed<A, B, AOutput, BOutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<AOutput, E> {
+    type Output = AOutput;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let output = self.parser.parse(stream)?;
         let _ = self.suffix.parse(stream)?;
         Ok(output)
@@ -178,9 +188,9 @@ pub fn between<A, B, C, S, AOutput, BOutput, COutput, E>(
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
-    C: Parser<S, COutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
+    C: Parser<S, E, Output = COutput>,
 {
     Between {
         prefix,
@@ -195,9 +205,9 @@ pub struct Between<A, B, C, AOutput, BOutput, COutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
-    C: Parser<S, COutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
+    C: Parser<S, E, Output = COutput>,
 {
     prefix: A,
     parser: B,
@@ -205,16 +215,18 @@ where
     _phantom: PhantomData<*const (S, AOutput, BOutput, COutput, E)>,
 }
 
-impl<A, B, C, AOutput, BOutput, COutput, S, E> Parser<S, BOutput, E>
+impl<A, B, C, AOutput, BOutput, COutput, S, E> Parser<S, E>
     for Between<A, B, C, AOutput, BOutput, COutput, S, E>
 where
     S: Stream,
     E: Error<S>,
-    A: Parser<S, AOutput, E>,
-    B: Parser<S, BOutput, E>,
-    C: Parser<S, COutput, E>,
+    A: Parser<S, E, Output = AOutput>,
+    B: Parser<S, E, Output = BOutput>,
+    C: Parser<S, E, Output = COutput>,
 {
-    fn parse(&mut self, stream: &mut S) -> Result<BOutput, E> {
+    type Output = BOutput;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let _ = self.prefix.parse(stream)?;
         let output = self.parser.parse(stream)?;
         let _ = self.suffix.parse(stream)?;

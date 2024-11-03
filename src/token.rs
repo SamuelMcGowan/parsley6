@@ -27,13 +27,15 @@ pub struct Peek<S: Stream, E> {
     _phantom: PhantomData<*const E>,
 }
 
-impl<S, E> Parser<S, S::Token, E> for Peek<S, E>
+impl<S, E> Parser<S, E> for Peek<S, E>
 where
     S: Stream<Token: Clone>,
     E: Error<S>,
 {
+    type Output = S::Token;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match stream.peek_token() {
             Some(token) if self.token == token => Ok(token),
             _ => Err(E::new(
@@ -63,13 +65,15 @@ pub struct Eat<S: Stream, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<S, E> Parser<S, S::Token, E> for Eat<S, E>
+impl<S, E> Parser<S, E> for Eat<S, E>
 where
     S: Stream<Token: Clone>,
     E: Error<S>,
 {
+    type Output = S::Token;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match stream.peek_token() {
             Some(token) if self.token == token => {
                 stream.next_token();
@@ -103,14 +107,16 @@ pub struct PeekIf<F, S, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<F, S, E> Parser<S, S::Token, E> for PeekIf<F, S, E>
+impl<F, S, E> Parser<S, E> for PeekIf<F, S, E>
 where
     F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
+    type Output = S::Token;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match stream.peek_token() {
             Some(token) if (self.f)(&token) => Ok(token),
             _ => Err(E::new(
@@ -141,14 +147,16 @@ pub struct EatIf<F, S, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<F, S, E> Parser<S, S::Token, E> for EatIf<F, S, E>
+impl<F, S, E> Parser<S, E> for EatIf<F, S, E>
 where
     F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
+    type Output = S::Token;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         match stream.peek_token() {
             Some(token) if (self.f)(&token) => {
                 stream.next_token();
@@ -181,13 +189,15 @@ pub struct PeekSlice<S: Stream, E> {
     _phantom: PhantomData<*const E>,
 }
 
-impl<S, E> Parser<S, S::SliceRef, E> for PeekSlice<S, E>
+impl<S, E> Parser<S, E> for PeekSlice<S, E>
 where
     S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
+    type Output = S::SliceRef;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         stream.peek_slice(self.slice).ok_or_else(|| {
             E::new(
                 E::Cause::expected_slice(self.slice),
@@ -216,13 +226,15 @@ pub struct EatSlice<S: Stream, E> {
     _phantom: PhantomData<*const E>,
 }
 
-impl<S, E> Parser<S, S::SliceRef, E> for EatSlice<S, E>
+impl<S, E> Parser<S, E> for EatSlice<S, E>
 where
     S: Stream<Slice: PartialEq>,
     E: Error<S>,
 {
+    type Output = S::SliceRef;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         stream.eat_slice(self.slice).ok_or_else(|| {
             E::new(
                 E::Cause::expected_slice(self.slice),
@@ -250,13 +262,15 @@ pub struct End<S, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<S, E> Parser<S, (), E> for End<S, E>
+impl<S, E> Parser<S, E> for End<S, E>
 where
     S: Stream,
     E: Error<S>,
 {
+    type Output = ();
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<(), E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         if stream.at_end() {
             Ok(())
         } else {
@@ -285,14 +299,16 @@ pub struct EatUntil<F, S, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<F, S, E> Parser<S, S::SliceRef, E> for EatUntil<F, S, E>
+impl<F, S, E> Parser<S, E> for EatUntil<F, S, E>
 where
     F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
+    type Output = S::SliceRef;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::SliceRef, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         let start = stream.stream_position();
         while stream.peek_token().is_some_and(|t| (self.f)(&t)) {
             stream.next_token();
@@ -323,14 +339,16 @@ pub struct Seek<F, S, E> {
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<F, S, E> Parser<S, S::Token, E> for Seek<F, S, E>
+impl<F, S, E> Parser<S, E> for Seek<F, S, E>
 where
     F: Fn(&S::Token) -> Option<ShouldConsume>,
     S: Stream,
     E: Error<S>,
 {
+    type Output = S::Token;
+
     #[inline]
-    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         while let Some(token) = stream.peek_token() {
             if let Some(should_consume) = (self.f)(&token) {
                 if should_consume == ShouldConsume::Yes {
