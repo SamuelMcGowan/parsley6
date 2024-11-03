@@ -8,6 +8,7 @@ use crate::error::{Cause, Error};
 use crate::parser::Parser;
 use crate::stream::Stream;
 
+/// Match a token without consuming it, or return an error.
 #[inline]
 pub fn peek<S, E>(token: S::Token) -> Peek<S, E>
 where
@@ -43,6 +44,7 @@ where
     }
 }
 
+/// Consume a token if it matches the expected token, or return an error.
 #[inline]
 pub fn eat<S, E>(token: S::Token) -> Eat<S, E>
 where
@@ -81,6 +83,7 @@ where
     }
 }
 
+/// Match a token without consuming it if it matches the predicate, or return an error.
 #[inline]
 pub fn peek_if<F, S, E>(f: F) -> PeekIf<F, S, E>
 where
@@ -118,6 +121,7 @@ where
     }
 }
 
+/// Consume a token if it matches the predicate, or return an error.
 #[inline]
 pub fn eat_if<F, S, E>(f: F) -> EatIf<F, S, E>
 where
@@ -158,6 +162,7 @@ where
     }
 }
 
+/// Match a slice without consuming it, or return an error.
 #[inline]
 pub fn peek_slice<S, E>(slice: &'static S::Slice) -> PeekSlice<S, E>
 where
@@ -192,6 +197,7 @@ where
     }
 }
 
+/// Consume a slice if it matches, or return an error.
 #[inline]
 pub fn eat_slice<S, E>(slice: &'static S::Slice) -> EatSlice<S, E>
 where
@@ -226,6 +232,7 @@ where
     }
 }
 
+/// Matches the end of the stream.
 #[inline]
 pub fn end<S, E>() -> End<S, E>
 where
@@ -258,26 +265,27 @@ where
     }
 }
 
+/// Eat tokens while `f` returns `true`.
 #[inline]
-pub fn eat_while<F, S, E>(f: F) -> EatWhile<F, S, E>
+pub fn eat_while<F, S, E>(f: F) -> EatUntil<F, S, E>
 where
     F: Fn(&S::Token) -> bool,
     S: Stream,
     E: Error<S>,
 {
-    EatWhile {
+    EatUntil {
         f,
         _phantom: PhantomData,
     }
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
-pub struct EatWhile<F, S, E> {
+pub struct EatUntil<F, S, E> {
     f: F,
     _phantom: PhantomData<*const (S, E)>,
 }
 
-impl<F, S, E> Parser<S, S::SliceRef, E> for EatWhile<F, S, E>
+impl<F, S, E> Parser<S, S::SliceRef, E> for EatUntil<F, S, E>
 where
     F: Fn(&S::Token) -> bool,
     S: Stream,
@@ -291,5 +299,55 @@ where
         }
         let end = stream.stream_position();
         Ok(stream.slice(start, end))
+    }
+}
+
+/// Eat tokens until `f` returns `true`.
+///
+/// If `consume` is `true`, the token matched will be consumed,
+/// otherwise it will be left in the stream.
+#[inline]
+pub fn seek<F, S, E>(f: F, consume: bool) -> Seek<F, S, E>
+where
+    F: Fn(&S::Token) -> bool,
+    S: Stream,
+    E: Error<S>,
+{
+    Seek {
+        f,
+        consume,
+        _phantom: PhantomData,
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
+pub struct Seek<F, S, E> {
+    f: F,
+    consume: bool,
+    _phantom: PhantomData<*const (S, E)>,
+}
+
+impl<F, S, E> Parser<S, S::Token, E> for Seek<F, S, E>
+where
+    F: Fn(&S::Token) -> bool,
+    S: Stream,
+    E: Error<S>,
+{
+    #[inline]
+    fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
+        while let Some(token) = stream.peek_token() {
+            if (self.f)(&token) {
+                if self.consume {
+                    stream.next_token();
+                }
+                return Ok(token);
+            }
+            stream.next_token();
+        }
+
+        Err(E::new(
+            E::Cause::expected_predicate(),
+            stream.peek_token_span(),
+        ))
     }
 }
