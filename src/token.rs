@@ -302,20 +302,17 @@ where
     }
 }
 
-/// Eat tokens until `f` returns `true`.
-///
-/// If `consume` is `true`, the token matched will be consumed,
-/// otherwise it will be left in the stream.
+/// Eat tokens until `f` returns `Some(should_consume)`
+/// (where `should_consume` indicates whether this final token should be consumed).
 #[inline]
-pub fn seek<F, S, E>(f: F, consume: bool) -> Seek<F, S, E>
+pub fn seek<F, S, E>(f: F) -> Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> bool,
+    F: Fn(&S::Token) -> Option<ShouldConsume>,
     S: Stream,
     E: Error<S>,
 {
     Seek {
         f,
-        consume,
         _phantom: PhantomData,
     }
 }
@@ -323,25 +320,26 @@ where
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
 pub struct Seek<F, S, E> {
     f: F,
-    consume: bool,
     _phantom: PhantomData<*const (S, E)>,
 }
 
 impl<F, S, E> Parser<S, S::Token, E> for Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> bool,
+    F: Fn(&S::Token) -> Option<ShouldConsume>,
     S: Stream,
     E: Error<S>,
 {
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<S::Token, E> {
         while let Some(token) = stream.peek_token() {
-            if (self.f)(&token) {
-                if self.consume {
+            if let Some(should_consume) = (self.f)(&token) {
+                if should_consume == ShouldConsume::Yes {
                     stream.next_token();
                 }
+
                 return Ok(token);
             }
+
             stream.next_token();
         }
 
@@ -350,4 +348,13 @@ where
             stream.peek_token_span(),
         ))
     }
+}
+
+/// Whether or not to consume a token.
+///
+/// For use with [`seek`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ShouldConsume {
+    Yes,
+    No,
 }

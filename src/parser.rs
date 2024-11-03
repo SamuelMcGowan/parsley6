@@ -178,6 +178,15 @@ where
         }
     }
 
+    /// Discard the output of this parser (and output `()` instead).
+    #[inline]
+    fn drop(self) -> MapTo<Self, O, (), S, E>
+    where
+        Self: Sized,
+    {
+        self.map_to(())
+    }
+
     /// Creates a parser that runs this parser followed by another, discarding the first parser's output.
     #[inline]
     fn drop_then<P, POutput>(self, parser: P) -> Prefixed<Self, P, O, POutput, S, E>

@@ -26,6 +26,9 @@ fn main() {
 
     println!("{:?}", test(list, "[bcbcbc]"));
     println!("{:?}", test(list, "[bcbcb]"));
+
+    println!("{:?}", test(seek_semicolon, "hello;world"));
+    println!("{:?}", test(seek_semicolon, "no semicolon"));
 }
 
 fn test<'a, P: Parser<CharStream<'a>, T, Error<'a>>, T>(
@@ -68,6 +71,12 @@ fn _ident<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
     )
     .to_slice()
     .parse(stream)
+}
+
+fn seek_semicolon<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
+    seek(|&ch| (ch == ';').then_some(ShouldConsume::No))
+        .to_slice()
+        .parse(stream)
 }
 
 fn list<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
