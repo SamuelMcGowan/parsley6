@@ -106,9 +106,8 @@ pub struct MapErrWithState<P, F, S, E> {
 impl<P, F, S, E> Parser<S, E> for MapErrWithState<P, F, S, E>
 where
     P: Parser<S, E>,
-    S: BorrowState,
     F: FnMut(E, &mut S::State) -> E,
-    S: Stream,
+    S: Stream + BorrowState,
     E: Error<S>,
 {
     type Output = P::Output;
@@ -162,6 +161,29 @@ where
 }
 
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct AndThenWithState<P, F, O, S, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, O, E)>,
+}
+
+impl<P, F, O, S, E> Parser<S, E> for AndThenWithState<P, F, O, S, E>
+where
+    P: Parser<S, E>,
+    F: FnMut(P::Output, &mut S::State) -> Result<O, E>,
+    S: Stream + BorrowState,
+    E: Error<S>,
+{
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
+        self.parser
+            .parse(stream)
+            .and_then(|output| (self.f)(output, stream.borrow_state()))
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
 pub struct OrElse<P, F, S, E> {
     pub(crate) parser: P,
     pub(crate) f: F,
@@ -179,6 +201,29 @@ where
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         self.parser.parse(stream).or_else(&mut self.f)
+    }
+}
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P, F)]
+pub struct OrElseWithState<P, F, S, E> {
+    pub(crate) parser: P,
+    pub(crate) f: F,
+    pub(crate) _phantom: PhantomData<*const (S, E)>,
+}
+
+impl<P, F, S, E> Parser<S, E> for OrElseWithState<P, F, S, E>
+where
+    P: Parser<S, E>,
+    F: FnMut(E, &mut S::State) -> Result<P::Output, E>,
+    S: Stream + BorrowState,
+    E: Error<S>,
+{
+    type Output = P::Output;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
+        self.parser
+            .parse(stream)
+            .or_else(|err| (self.f)(err, stream.borrow_state()))
     }
 }
 

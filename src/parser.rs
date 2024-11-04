@@ -124,6 +124,21 @@ where
         }
     }
 
+    /// Map the output of this parser to a result value, with access to the stream's state.
+    #[inline]
+    fn and_then_with_state<F, O>(self, f: F) -> AndThenWithState<Self, F, O, S, E>
+    where
+        Self: Sized,
+        F: FnMut(Self::Output, &mut S::State) -> Result<O, E>,
+        S: BorrowState,
+    {
+        AndThenWithState {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Map the error of this parser to a result value.
     #[inline]
     fn or_else<F>(self, f: F) -> OrElse<Self, F, S, E>
@@ -132,6 +147,21 @@ where
         F: FnMut(E) -> Result<Self::Output, E>,
     {
         OrElse {
+            parser: self,
+            f,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Map the error of this parser to a result value, with access to the stream's state.
+    #[inline]
+    fn or_else_with_state<F>(self, f: F) -> OrElseWithState<Self, F, S, E>
+    where
+        Self: Sized,
+        F: FnMut(E, &mut S::State) -> Result<Self::Output, E>,
+        S: BorrowState,
+    {
+        OrElseWithState {
             parser: self,
             f,
             _phantom: PhantomData,
