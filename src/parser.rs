@@ -257,7 +257,7 @@ where
     where
         Self: Sized,
         D: FnMut() -> Self::Output,
-        S::Token: BorrowState<State: Report<E>>,
+        S: BorrowState<State: Report<E>>,
     {
         Terminated {
             parser: self,
