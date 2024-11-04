@@ -279,23 +279,23 @@ where
         }
     }
 
-    /// Create a parser terminated by a token.
-    /// If the parser fails, reports the error and seeks until the token is found
-    /// or the stream ends.
-    #[inline]
-    fn terminated<D>(self, token: S::Token, default: D) -> Terminated<Self, D, S, E>
-    where
-        Self: Sized,
-        D: FnMut() -> Self::Output,
-        S: BorrowState<State: Report<E>>,
-    {
-        Terminated {
-            parser: self,
-            token,
-            default,
-            _phantom: PhantomData,
-        }
-    }
+    // /// Create a parser terminated by a token.
+    // /// If the parser fails, reports the error and seeks until the token is found
+    // /// or the stream ends.
+    // #[inline]
+    // fn terminated<D>(self, token: S::Token, default: D) -> Terminated<Self, D, S, E>
+    // where
+    //     Self: Sized,
+    //     D: FnMut() -> Self::Output,
+    //     S: BorrowState<State: Report<E>>,
+    // {
+    //     Terminated {
+    //         parser: self,
+    //         token,
+    //         default,
+    //         _phantom: PhantomData,
+    //     }
+    // }
 
     /// Creates a parser with a custom cause for error messages.
     #[inline]
