@@ -11,6 +11,7 @@ use crate::{
     message = "Not a parser (for these stream and error types).",
     label = "Doesn't implement `Parser<{S}, {E}>`."
 )]
+#[must_use = "Parsers do nothing unless `parse` is called."]
 pub trait Parser<S, E>
 where
     S: Stream,
@@ -213,7 +214,7 @@ where
         self.map_to(())
     }
 
-    /// Creates a parser that runs this parser followed by another, discarding the first parser's output.
+    /// Run this parser followed by another, discarding the first parser's output.
     #[inline]
     fn drop_then<P>(self, parser: P) -> Prefixed<Self, P, S, E>
     where
@@ -223,7 +224,7 @@ where
         prefixed(self, parser)
     }
 
-    /// Creates a parser that runs this parser followed by another, discarding the second parser's output.
+    /// Run this parser followed by another, discarding the second parser's output.
     #[inline]
     fn then_drop<P>(self, parser: P) -> Suffixed<Self, P, S, E>
     where
@@ -246,9 +247,9 @@ where
     //     }
     // }
 
-    /// Repeat this parser while the next token matches.
+    /// Repeat this parser while the next token matches the predicate.
     ///
-    /// Does not consume the token matched.
+    /// Does not consume tokens matched by the predicate.
     #[inline]
     fn repeat_while<F>(self, f: F) -> RepeatWhile<Self, F, NoCollection, S, E>
     where
@@ -264,7 +265,7 @@ where
         }
     }
 
-    /// If this parser fails, reports the error and runs another parser to recover.
+    /// If this parser fails, report the error and then recover by running another parser.
     #[inline]
     fn or_recover<R>(self, recover: R) -> OrRecover<Self, R, S, E>
     where
@@ -297,7 +298,7 @@ where
     //     }
     // }
 
-    /// Creates a parser with a custom cause for error messages.
+    /// Set the cause for errors produced by this parser.
     #[inline]
     fn with_err_cause<F>(self, make_cause: F) -> WithErrCause<Self, F, S, E>
     where
@@ -311,7 +312,7 @@ where
         }
     }
 
-    /// Creates a parser with additional context for error messages.
+    /// Add context to errors produced by this parser.
     #[inline]
     fn with_err_context<F, Context>(self, make_context: F) -> WithErrContext<Self, F, Context, S, E>
     where
@@ -326,7 +327,7 @@ where
         }
     }
 
-    /// Create a new parser from this one without consuming it.
+    /// Take this parser by reference.
     #[inline]
     fn by_ref(&mut self) -> ByRef<Self, S, E>
     where
