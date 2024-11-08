@@ -318,12 +318,11 @@ where
     }
 }
 
-/// Eat tokens until `f` returns `Some(should_consume)`
-/// (where `should_consume` indicates whether this final token should be consumed).
+/// Eat tokens until `f` returns `Some(seek_result)`.
 #[inline]
 pub fn seek<F, S, E>(f: F) -> Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> Option<ShouldConsume>,
+    F: Fn(&S::Token) -> Option<SeekResult>,
     S: Stream,
     E: Error<S>,
 {
@@ -341,7 +340,7 @@ pub struct Seek<F, S, E> {
 
 impl<F, S, E> Parser<S, E> for Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> Option<ShouldConsume>,
+    F: Fn(&S::Token) -> Option<SeekResult>,
     S: Stream,
     E: Error<S>,
 {
@@ -350,12 +349,20 @@ where
     #[inline]
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
         while let Some(token) = stream.peek_token() {
-            if let Some(should_consume) = (self.f)(&token) {
-                if should_consume == ShouldConsume::Yes {
-                    stream.next_token();
-                }
+            if let Some(seek_result) = (self.f)(&token) {
+                return match seek_result {
+                    SeekResult::Match { consume } => {
+                        if consume {
+                            stream.next_token();
+                        }
+                        Ok(token)
+                    }
 
-                return Ok(token);
+                    SeekResult::NoMatch => Err(E::new(
+                        E::Cause::expected_predicate(),
+                        stream.peek_token_span(),
+                    )),
+                };
             }
 
             stream.next_token();
@@ -368,11 +375,15 @@ where
     }
 }
 
-/// Whether or not to consume a token.
-///
-/// For use with [`seek`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ShouldConsume {
-    Yes,
-    No,
+pub enum SeekResult {
+    Match { consume: bool },
+    NoMatch,
+}
+
+impl SeekResult {
+    #[inline]
+    pub fn match_if(m: bool, consume: bool) -> Option<Self> {
+        m.then_some(Self::Match { consume })
+    }
 }

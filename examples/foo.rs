@@ -75,7 +75,7 @@ fn _ident<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
 }
 
 fn seek_semicolon<'a>(stream: &mut CharStream<'a>) -> Result<&'a str, Error<'a>> {
-    seek(|&ch| (ch == ';').then_some(ShouldConsume::No))
+    seek(|&ch| SeekResult::match_if(ch == ';', false))
         .to_slice()
         .parse(stream)
 }
