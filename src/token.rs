@@ -318,19 +318,25 @@ where
     }
 }
 
-/// Eat tokens until `f` returns `Some(seek_result)`.
+/// Eat tokens until `f` returns `Some(is_match)`.
 ///
-/// If `must_progress` is `true`, the parser will fail if it fails to consume any tokens.
+/// - If `f` returns `Some(true)`, the token is consumed and the seek succeeds.
+/// - If `f` returns `Some(false)`, the token is not consumed and the seek fails.
+///   This may be useful if you encounter a token that you wish to stop at
+///   (for example, a closing brace) but don't want to consume it.
+/// - If `f` returns `None`, the seek continues.
+///
+/// This design upholds the principle that a successful parse always consumes at
+/// least one token.
 #[inline]
-pub fn seek<F, S, E>(f: F, must_progress: bool) -> Seek<F, S, E>
+pub fn seek<F, S, E>(f: F) -> Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> Option<SeekResult>,
+    F: Fn(&S::Token) -> Option<bool>,
     S: Stream,
     E: Error<S>,
 {
     Seek {
         f,
-        must_progress,
         _phantom: PhantomData,
     }
 }
@@ -338,60 +344,37 @@ where
 #[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; F)]
 pub struct Seek<F, S, E> {
     f: F,
-    must_progress: bool,
     _phantom: PhantomData<*const (S, E)>,
 }
 
 impl<F, S, E> Parser<S, E> for Seek<F, S, E>
 where
-    F: Fn(&S::Token) -> Option<SeekResult>,
+    F: Fn(&S::Token) -> Option<bool>,
     S: Stream,
     E: Error<S>,
 {
     type Output = S::Token;
 
     fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
-        let mut progressed = false;
-
         while let Some(token) = stream.peek_token() {
             if let Some(seek_result) = (self.f)(&token) {
-                return match seek_result {
-                    SeekResult::Match { consume: true } => {
-                        stream.next_token();
-                        Ok(token)
-                    }
-
-                    SeekResult::Match { consume: false } if !self.must_progress || progressed => {
-                        Ok(token)
-                    }
-
-                    _ => Err(E::new(
+                return if seek_result {
+                    stream.next_token();
+                    Ok(token)
+                } else {
+                    Err(E::new(
                         E::Cause::expected_predicate(),
                         stream.peek_token_span(),
-                    )),
+                    ))
                 };
             }
 
             stream.next_token();
-            progressed = true;
         }
 
         Err(E::new(
             E::Cause::expected_predicate(),
             stream.peek_token_span(),
         ))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SeekResult {
-    Match { consume: bool },
-    NoMatch,
-}
-
-impl SeekResult {
-    #[inline]
-    pub fn match_if(m: bool, consume: bool) -> Option<Self> {
-        m.then_some(Self::Match { consume })
     }
 }
