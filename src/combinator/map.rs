@@ -294,3 +294,23 @@ where
         Ok((output, span))
     }
 }
+
+#[derive_where(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash; P)]
+pub struct MapInto<P, O, S, E> {
+    pub(crate) parser: P,
+    pub(crate) _phantom: PhantomData<*const (O, S, E)>,
+}
+
+impl<P, O, S, E> Parser<S, E> for MapInto<P, O, S, E>
+where
+    P: Parser<S, E>,
+    O: From<P::Output>,
+    S: Stream,
+    E: Error<S>,
+{
+    type Output = O;
+
+    fn parse(&mut self, stream: &mut S) -> Result<Self::Output, E> {
+        self.parser.parse(stream).map(Into::into)
+    }
+}

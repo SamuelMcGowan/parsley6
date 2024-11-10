@@ -205,6 +205,19 @@ where
         }
     }
 
+    /// Call [`Into::into`] on the output of this parser.
+    #[inline]
+    fn map_into<O>(self) -> MapInto<Self, O, S, E>
+    where
+        Self: Sized,
+        O: From<Self::Output>,
+    {
+        MapInto {
+            parser: self,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Discard the output of this parser (and output `()` instead).
     #[inline]
     fn drop(self) -> MapTo<Self, (), S, E>
