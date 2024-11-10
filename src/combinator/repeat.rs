@@ -155,7 +155,16 @@ where
             }
 
             match stream.peek_token() {
-                Some(token) if (self.f)(&token) => Some(self.parser.parse(stream)),
+                Some(token) if (self.f)(&token) => {
+                    let start = stream.stream_position();
+                    let result = self.parser.parse(stream);
+
+                    if result.is_ok() && stream.stream_position() == start {
+                        panic!("parser did not make progress");
+                    }
+
+                    Some(result)
+                }
                 _ if n < self.min => {
                     Some(Err(E::new(E::Cause::unknown(), stream.peek_token_span())))
                 }

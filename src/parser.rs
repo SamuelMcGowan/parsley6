@@ -250,6 +250,10 @@ where
     /// Repeat this parser while the next token matches the predicate.
     ///
     /// Does not consume tokens matched by the predicate.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an iteration succeeds without making progress.
     #[inline]
     fn repeat_while<F>(self, f: F) -> RepeatWhile<Self, F, NoCollection, S, E>
     where
